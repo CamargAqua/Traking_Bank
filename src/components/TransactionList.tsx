@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { CategoryBadge } from './CategoryBadge'
 import { TagModal } from './TagModal'
@@ -177,8 +177,8 @@ export function TransactionList({ transactions }: TransactionListProps) {
           <tbody>
             {groups ? (
               groups.map(({ cat, txs, total }) => (
-                <>
-                  <tr key={`hdr-${cat}`} className="bg-[#f7f7f5] border-b border-[#ebebeb]">
+                <Fragment key={cat}>
+                  <tr className="bg-[#f7f7f5] border-b border-[#ebebeb]">
                     <td colSpan={2} className="px-4 py-1.5">
                       <div className="flex items-center gap-2">
                         <span
@@ -199,7 +199,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                     </td>
                   </tr>
                   {txs.map(renderRow)}
-                </>
+                </Fragment>
               ))
             ) : (
               <>

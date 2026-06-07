@@ -40,3 +40,13 @@ model RegleCategorie {
   categorie String
   createdAt DateTime @default(now())
 }
+
+model BulletinSalaire {
+  id              String   @id @default(cuid())
+  periode         String   @unique // "2026-01"
+  salaireBrutFixe Float
+  salaireBrutVar  Float    @default(0)
+  cotisations     Float
+  netAPayer       Float
+  createdAt       DateTime @default(now())
+}

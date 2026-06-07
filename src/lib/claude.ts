@@ -202,3 +202,44 @@ export async function parseReleveWithClaude(pdfText: string): Promise<ReleveInfo
     throw new Error('Impossible de parser la réponse Claude. Réessayez.')
   }
 }
+
+export interface BulletinInfo {
+  periode: string        // "2026-01"
+  salaireBrutFixe: number
+  salaireBrutVar: number
+  cotisations: number
+  netAPayer: number
+}
+
+const BULLETIN_PROMPT = `Tu analyses un bulletin de salaire français de Victor Michel (salarié chez Seres Technologies).
+Extrais les informations clés et retourne UNIQUEMENT du JSON valide :
+{"periode":"2026-01","salaireBrutFixe":2800.00,"salaireBrutVar":0,"cotisations":950.00,"netAPayer":2850.00}
+
+Règles :
+- periode : format "YYYY-MM" (mois du bulletin)
+- salaireBrutFixe : salaire de base brut mensuel (hors primes et variables)
+- salaireBrutVar : total des éléments variables bruts (primes, heures sup, etc.) — 0 si aucun
+- cotisations : total des cotisations salariales (part salarié uniquement)
+- netAPayer : montant net à payer avant impôt à la source (ou net imposable si net à payer absent)
+Si une valeur est absente, mets 0.
+Retourne UNIQUEMENT le JSON, sans texte autour.`
+
+export async function parseBulletinWithClaude(pdfText: string): Promise<BulletinInfo> {
+  const truncated = pdfText.slice(0, 20000)
+
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
+    messages: [{ role: 'user', content: `Bulletin de salaire :\n\n${truncated}` }],
+    system: BULLETIN_PROMPT,
+  })
+
+  const content = message.content[0]
+  if (content.type !== 'text') throw new Error('Réponse inattendue')
+
+  let raw = content.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+  try { return JSON.parse(raw) as BulletinInfo } catch { /* fallthrough */ }
+  try { return JSON.parse(jsonrepair(raw)) as BulletinInfo } catch {
+    throw new Error('Impossible de parser le bulletin. Réessayez.')
+  }
+}

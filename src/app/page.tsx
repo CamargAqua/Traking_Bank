@@ -4,9 +4,14 @@ import { KPICard } from '@/components/KPICard'
 import { CategoryChart } from '@/components/CategoryChart'
 import { TransactionList } from '@/components/TransactionList'
 import { HistoryChart } from '@/components/HistoryChart'
+import { EvolutionChart } from '@/components/EvolutionChart'
 import { REVENUS, CHARGES_FIXES, EXCLUS, CATEGORIE_LABELS, CATEGORIE_COLORS, type Categorie } from '@/lib/categories'
 import Link from 'next/link'
 import { PeriodSelector } from '@/components/PeriodSelector'
+
+const EVOLUTION_CATS: Categorie[] = [
+  'RESTOS_BARS', 'ALIMENTATION', 'TRANSPORT', 'SHOPPING', 'SANTE', 'CASH_DAB', 'ABONNEMENT',
+]
 
 interface PageProps {
   searchParams: Promise<{ releve?: string }>
@@ -21,6 +26,18 @@ async function getReleveData(id: string) {
     where: { id },
     include: { transactions: { orderBy: { date: 'desc' } } },
   })
+}
+
+async function getAllTransactionsByPeriode() {
+  const releves = await prisma.releve.findMany({
+    orderBy: { dateDebut: 'asc' },
+    include: { transactions: { where: { exclure: false } } },
+  })
+  return releves
+}
+
+async function getBulletins() {
+  return prisma.bulletinSalaire.findMany({ orderBy: { periode: 'desc' } })
 }
 
 const MONTH_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc']
@@ -45,6 +62,28 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const activeId = releveId ?? releves[0]?.id
   const releve = activeId ? await getReleveData(activeId) : null
   const history = releves.map(r => ({ periode: r.periode, soldeFin: r.soldeFin }))
+
+  const [allReleves, bulletins] = await Promise.all([
+    getAllTransactionsByPeriode(),
+    getBulletins(),
+  ])
+
+  // Evolution chart data — variable spending per period
+  const evolutionData = allReleves.map(r => {
+    const point: { periode: string; [cat: string]: number | string } = { periode: r.periode }
+    for (const cat of EVOLUTION_CATS) {
+      point[cat] = r.transactions
+        .filter(t => t.categorie === cat && t.montant < 0)
+        .reduce((s, t) => s + Math.abs(t.montant), 0)
+    }
+    return point
+  })
+  const activeCats = EVOLUTION_CATS.filter(cat =>
+    evolutionData.some(d => (d[cat] as number) > 0)
+  )
+
+  // Bulletin for current period
+  const bulletinActuel = releve ? bulletins.find(b => b.periode === releve.periode) : null
 
   if (releves.length === 0) {
     return (
@@ -284,6 +323,65 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                 <HistoryChart data={history} />
               </div>
             </div>
+          </div>
+
+          {/* Évolution multi-mois + Bulletin de salaire */}
+          <div className="grid gap-3.5" style={{ gridTemplateColumns: bulletinActuel ? '1.6fr 1fr' : '1fr' }}>
+
+            {/* Evolution chart */}
+            <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
+                <span className="text-[13.5px] font-bold tracking-[-0.2px]">Évolution dépenses variables</span>
+                <span className="text-[11.5px] text-[#999]">{allReleves.length} mois</span>
+              </div>
+              <div className="p-5">
+                <EvolutionChart data={evolutionData} categories={activeCats} />
+              </div>
+            </div>
+
+            {/* Bulletin de salaire */}
+            {bulletinActuel ? (
+              <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
+                  <span className="text-[13.5px] font-bold tracking-[-0.2px]">Bulletin de salaire</span>
+                  <span className="text-[11.5px] text-[#999]">{bulletinActuel.periode}</span>
+                </div>
+                <div className="p-5 flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12.5px] text-[#555]">Brut fixe</span>
+                    <span className="text-[13px] font-semibold">{fmtAmount(bulletinActuel.salaireBrutFixe)}</span>
+                  </div>
+                  {bulletinActuel.salaireBrutVar > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] text-[#555]">Variable / prime</span>
+                      <span className="text-[13px] font-semibold text-[#059669]">+{fmtAmount(bulletinActuel.salaireBrutVar)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12.5px] text-[#555]">Cotisations salariales</span>
+                    <span className="text-[13px] font-semibold text-[#e53e3e]">−{fmtAmount(bulletinActuel.cotisations)}</span>
+                  </div>
+                  <div className="border-t border-[#f2f2f2] pt-3 flex justify-between items-center">
+                    <span className="text-[12px] font-bold text-[#111]">Net à payer</span>
+                    <span className="text-[16px] font-bold text-[#00b37e]">{fmtAmount(bulletinActuel.netAPayer)}</span>
+                  </div>
+                  {salaire > 0 && (
+                    <div className="bg-[#f7f7f5] rounded-lg px-3 py-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11.5px] text-[#999]">Reçu en banque (Seres)</span>
+                        <span className={`text-[12px] font-semibold ${Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? 'text-[#00b37e]' : 'text-[#d97706]'}`}>
+                          {fmtAmount(salaire)}
+                        </span>
+                      </div>
+                      <div className="text-[10.5px] text-[#bbb] mt-0.5">
+                        Écart: {fmtAmount(Math.abs(salaire - bulletinActuel.netAPayer))}
+                        {Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? ' ✓' : ' ⚠ PAS'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Top marchands */}

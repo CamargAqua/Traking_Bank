@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choix de direction visuelle</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Bricolage+Grotesque:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #f0f0ec;
+  font-family: 'Inter', sans-serif;
+  padding: 40px 32px;
+  min-height: 100vh;
+}
+
+.page-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 36px;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1200px;
+}
+
+.option-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #888;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option-tag {
+  background: #e5e5e5;
+  color: #555;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ================================
+   OPTION A — Blanc Linear
+   ================================ */
+.a-wrap {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.a-sidebar {
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.a-logo { font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+.a-logo span { color: #3b82f6; }
+
+.a-period {
+  background: #f8faff;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.a-period-dot { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
+
+.a-body { padding: 16px; }
+
+.a-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.a-kpi {
+  background: #f8fafc;
+  border: 1px solid #e8eef5;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.a-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.a-kpi-value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.a-kpi-sub { font-size: 10.5px; color: #94a3b8; }
+.a-green { color: #16a34a; }
+.a-red { color: #ef4444; }
+.a-amber { color: #d97706; }
+.a-blue { color: #2563eb; }
+
+.a-txns { border: 1px solid #f0f4f8; border-radius: 10px; overflow: hidden; }
+
+.a-txn-head {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #94a3b8;
+}
+
+.a-txn-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  gap: 8px;
+  padding: 9px 12px;
+  align-items: center;
+  border-top: 1px solid #f8fafc;
+  font-size: 12px;
+}
+
+.a-txn-row:hover { background: #fafbff; }
+.a-date { font-size: 10.5px; color: #94a3b8; font-weight: 500; }
+.a-libelle { font-weight: 600; color: #1e293b; font-size: 12px; }
+.a-badge {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.a-badge-salary { background: #dcfce7; color: #16a34a; }
+.a-badge-logement { background: #dbeafe; color: #2563eb; }
+.a-badge-food { background: #d1fae5; color: #059669; }
+.a-badge-uncategorized { background: #fef3c7; color: #d97706; }
+.a-amount { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ================================
+   OPTION B — Crème & encre
+   ================================ */
+.b-wrap {
+  background: #faf8f5;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  border: 1px solid #ede9e3;
+}
+
+.b-topbar {
+  padding: 14px 18px;
+  border-bottom: 1px solid #ede9e3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #faf8f5;
+}
+
+.b-logo { font-size: 15px; font-weight: 800; color: #1a1612; letter-spacing: -0.5px; }
+.b-logo em { color: #d4622a; font-style: normal; }
+
+.b-period {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8c7e6e;
+  background: #f0ebe3;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #e5ddd2;
+}
+
+.b-body { padding: 16px; }
+
+.b-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.b-kpi {
+  background: #ffffff;
+  border: 1px solid #ede9e3;
+  border-radius: 10px;
+  padding: 14px;
+  position: relative;
+}
+
+.b-kpi-accent {
+  position: absolute;
+  top: 0; left: 14px;
+  width: 28px; height: 2px;
+  border-radius: 0 0 2px 2px;
+}
+
+.b-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #b0a090;
+  margin-bottom: 6px;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+.b-kpi-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #1a1612;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.b-kpi-sub { font-size: 10.5px; color: #b0a090; }
+.b-positive { color: #2d8653; }
+.b-negative { color: #c24b2a; }
+
+.b-txns { border: 1px solid #ede9e3; border-radius: 10px; overflow: hidden; background: #fff; }
+
+.b-txn-head {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f7f4ef;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #b0a090;
+}
+
+.b-txn-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  gap: 8px;
+  padding: 10px 12px;
+  align-items: center;
+  border-top: 1px solid #f5f0ea;
+  font-size: 12px;
+}
+
+.b-date { font-size: 10.5px; color: #b0a090; font-family: 'DM Mono', monospace; }
+.b-libelle { font-weight: 700; color: #1a1612; font-size: 12px; }
+.b-badge {
+  padding: 2px 9px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.b-badge-salary { background: #d8f3e5; color: #2d8653; }
+.b-badge-logement { background: #dde8f7; color: #2a5fc4; }
+.b-badge-food { background: #e8f5e5; color: #3a7a33; }
+.b-badge-uncategorized { background: #fdecd8; color: #c24b2a; }
+.b-amount { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ================================
+   OPTION C — Blanc Finary/N26
+   ================================ */
+.c-wrap {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.07);
+  font-family: 'DM Sans', sans-serif;
+  border: 1px solid #efefef;
+}
+
+.c-topbar {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.c-logo { font-size: 14px; font-weight: 700; color: #111; letter-spacing: -0.3px; }
+.c-logo span { color: #00b37e; }
+
+.c-period {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.c-period-pill {
+  background: #f4fdf9;
+  border: 1px solid #d0f0e4;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #00b37e;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.c-body { padding: 16px; }
+
+.c-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.c-kpi {
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid #f0f0f0;
+}
+
+.c-kpi.c-kpi-highlight {
+  background: #f4fdf9;
+  border-color: #d0f0e4;
+}
+
+.c-kpi-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+.c-kpi-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  color: #111;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.c-kpi-value.c-green { color: #00b37e; }
+.c-kpi-sub { font-size: 10.5px; color: #aaa; }
+
+.c-pill-up {
+  display: inline-block;
+  background: #e8faf3;
+  color: #00b37e;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+}
+
+.c-pill-dn {
+  display: inline-block;
+  background: #fef2f2;
+  color: #ef4444;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+}
+
+.c-bars { margin-bottom: 14px; }
+
+.c-bars-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+.c-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.c-bar-label { font-size: 11.5px; color: #444; font-weight: 500; width: 90px; flex-shrink: 0; }
+.c-bar-track { flex: 1; height: 5px; background: #f5f5f5; border-radius: 3px; overflow: hidden; }
+.c-bar-fill { height: 100%; border-radius: 3px; }
+.c-bar-amount { font-size: 11.5px; font-weight: 600; color: #111; width: 52px; text-align: right; flex-shrink: 0; }
+
+.c-txns { border-top: 1px solid #f5f5f5; }
+
+.c-txn-row {
+  display: grid;
+  grid-template-columns: 50px 1fr auto auto;
+  gap: 8px;
+  padding: 9px 0;
+  align-items: center;
+  border-bottom: 1px solid #fafafa;
+  font-size: 12px;
+}
+
+.c-date { font-size: 10.5px; color: #bbb; font-weight: 500; }
+.c-libelle { font-weight: 500; color: #111; font-size: 12px; }
+.c-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.c-badge-salary { background: #e8faf3; color: #00b37e; }
+.c-badge-logement { background: #eef2ff; color: #4f46e5; }
+.c-badge-food { background: #f0fdf4; color: #16a34a; }
+.c-badge-uncategorized { background: #fffbeb; color: #d97706; }
+.c-amount { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+
+.credit { color: #00b37e; }
+.debit { color: #ef4444; }
+.neutral { color: #94a3b8; }
+
+/* Footer hint */
+.option-desc {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #777;
+  line-height: 1.5;
+}
+
+.option-desc strong { color: #333; font-weight: 600; }
+
+/* Nav */
+.choice-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 32px;
+  max-width: 1200px;
+}
+
+.choice-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  background: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #444;
+}
+
+.choice-btn:hover { border-color: #333; color: #111; background: #fafafa; }
+</style>
+</head>
+<body>
+
+<p class="page-title">Direction visuelle — 3 options</p>
+<p class="page-sub">Dis-moi laquelle tu préfères (ou un mix) et je code l'app complète dans ce style.</p>
+
+<div class="options">
+
+  <!-- OPTION A -->
+  <div>
+    <div class="option-label">
+      Option A
+      <span class="option-tag">BLANC · LINEAR</span>
+    </div>
+    <div class="a-wrap">
+      <div class="a-sidebar">
+        <div class="a-logo">bank<span>.</span>track</div>
+        <div class="a-period"><div class="a-period-dot"></div> Mai 2026 · 04/05 → 04/06</div>
+      </div>
+      <div class="a-body">
+        <div class="a-kpis">
+          <div class="a-kpi">
+            <div class="a-kpi-label">Revenus nets</div>
+            <div class="a-kpi-value a-green">3 420 €</div>
+            <div class="a-kpi-sub">↑ +2.1% vs mois préc.</div>
+          </div>
+          <div class="a-kpi">
+            <div class="a-kpi-label">Charges fixes</div>
+            <div class="a-kpi-value a-red">1 187 €</div>
+            <div class="a-kpi-sub">Loyer · SFR · PEL</div>
+          </div>
+          <div class="a-kpi">
+            <div class="a-kpi-label">Dépenses variables</div>
+            <div class="a-kpi-value a-amber">1 052 €</div>
+            <div class="a-kpi-sub">↑ +8.4% vs mois préc.</div>
+          </div>
+          <div class="a-kpi">
+            <div class="a-kpi-label">Solde net</div>
+            <div class="a-kpi-value a-blue">1 181 €</div>
+            <div class="a-kpi-sub">Fin de mois : 1 981 €</div>
+          </div>
+        </div>
+        <div class="a-txns">
+          <div class="a-txn-head">
+            <span>Date</span><span>Libellé</span><span>Catégorie</span><span>Montant</span>
+          </div>
+          <div class="a-txn-row">
+            <span class="a-date">28 mai</span>
+            <span class="a-libelle">Seres Technologies</span>
+            <span class="a-badge a-badge-salary">Salaire</span>
+            <span class="a-amount credit">+2 850 €</span>
+          </div>
+          <div class="a-txn-row">
+            <span class="a-date">05 mai</span>
+            <span class="a-libelle">Oiko Gestion — Loyer</span>
+            <span class="a-badge a-badge-logement">Logement</span>
+            <span class="a-amount debit">−660 €</span>
+          </div>
+          <div class="a-txn-row">
+            <span class="a-date">12 mai</span>
+            <span class="a-libelle">Carrefour City</span>
+            <span class="a-badge a-badge-food">Alimentation</span>
+            <span class="a-amount debit">−47 €</span>
+          </div>
+          <div class="a-txn-row">
+            <span class="a-date">19 mai</span>
+            <span class="a-libelle">⚠ PRLV SEPA 247891XK</span>
+            <span class="a-badge a-badge-uncategorized">À taguer</span>
+            <span class="a-amount" style="color:#d97706">−29 €</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="option-desc">
+      <strong>Style :</strong> Blanc pur, ombres légères, badges colorés. Inspiré de Linear / Vercel. Typo Plus Jakarta Sans. Propre, pro, neutre.
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div>
+    <div class="option-label">
+      Option B
+      <span class="option-tag">CRÈME · CHAUD</span>
+    </div>
+    <div class="b-wrap">
+      <div class="b-topbar">
+        <div class="b-logo">finances<em>.</em></div>
+        <div class="b-period">Mai 2026 — 04/05 → 04/06</div>
+      </div>
+      <div class="b-body">
+        <div class="b-kpis">
+          <div class="b-kpi">
+            <div class="b-kpi-accent" style="background:#2d8653"></div>
+            <div class="b-kpi-label">Revenus nets</div>
+            <div class="b-kpi-value b-positive">3 420 €</div>
+            <div class="b-kpi-sub">↑ +2.1 % ce mois</div>
+          </div>
+          <div class="b-kpi">
+            <div class="b-kpi-accent" style="background:#c24b2a"></div>
+            <div class="b-kpi-label">Charges fixes</div>
+            <div class="b-kpi-value">1 187 €</div>
+            <div class="b-kpi-sub">Loyer · SFR · PEL</div>
+          </div>
+          <div class="b-kpi">
+            <div class="b-kpi-accent" style="background:#e09c30"></div>
+            <div class="b-kpi-label">Dépenses variables</div>
+            <div class="b-kpi-value">1 052 €</div>
+            <div class="b-kpi-sub">↑ +8.4 % vs préc.</div>
+          </div>
+          <div class="b-kpi">
+            <div class="b-kpi-accent" style="background:#2a5fc4"></div>
+            <div class="b-kpi-label">Solde net du mois</div>
+            <div class="b-kpi-value">1 181 €</div>
+            <div class="b-kpi-sub">Solde fin : 1 981 €</div>
+          </div>
+        </div>
+        <div class="b-txns">
+          <div class="b-txn-head">
+            <span>Date</span><span>Libellé</span><span>Catégorie</span><span>Montant</span>
+          </div>
+          <div class="b-txn-row">
+            <span class="b-date">28/05</span>
+            <span class="b-libelle">Seres Technologies</span>
+            <span class="b-badge b-badge-salary">Salaire</span>
+            <span class="b-amount" style="color:#2d8653">+2 850 €</span>
+          </div>
+          <div class="b-txn-row">
+            <span class="b-date">05/05</span>
+            <span class="b-libelle">Oiko Gestion — Loyer</span>
+            <span class="b-badge b-badge-logement">Logement</span>
+            <span class="b-amount b-negative">−660 €</span>
+          </div>
+          <div class="b-txn-row">
+            <span class="b-date">12/05</span>
+            <span class="b-libelle">Carrefour City</span>
+            <span class="b-badge b-badge-food">Alimentation</span>
+            <span class="b-amount b-negative">−47 €</span>
+          </div>
+          <div class="b-txn-row">
+            <span class="b-date">19/05</span>
+            <span class="b-libelle">⚠ PRLV SEPA 247891XK</span>
+            <span class="b-badge b-badge-uncategorized">À taguer</span>
+            <span class="b-amount" style="color:#c24b2a">−29 €</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="option-desc">
+      <strong>Style :</strong> Fond crème/ivoire, encre foncée, touches de terre cuite. Inspiré presse financière. Typo Bricolage Grotesque. Plus chaleureux et personnel.
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div>
+    <div class="option-label">
+      Option C
+      <span class="option-tag">BLANC · VERT · FINARY</span>
+    </div>
+    <div class="c-wrap">
+      <div class="c-topbar">
+        <div class="c-logo">mes<span>finances</span></div>
+        <div class="c-period">
+          <span style="color:#bbb;font-size:11px">Mai 2026</span>
+          <span class="c-period-pill">● En cours</span>
+        </div>
+      </div>
+      <div class="c-body">
+        <div class="c-kpis">
+          <div class="c-kpi c-kpi-highlight">
+            <div class="c-kpi-label">Revenus nets</div>
+            <div class="c-kpi-value c-green">3 420 €</div>
+            <div class="c-kpi-sub"><span class="c-pill-up">+2.1%</span> vs mois préc.</div>
+          </div>
+          <div class="c-kpi">
+            <div class="c-kpi-label">Charges fixes</div>
+            <div class="c-kpi-value">1 187 €</div>
+            <div class="c-kpi-sub">Loyer · SFR · PEL</div>
+          </div>
+          <div class="c-kpi">
+            <div class="c-kpi-label">Dépenses variables</div>
+            <div class="c-kpi-value">1 052 €</div>
+            <div class="c-kpi-sub"><span class="c-pill-dn">+8.4%</span> vs mois préc.</div>
+          </div>
+          <div class="c-kpi">
+            <div class="c-kpi-label">Solde net</div>
+            <div class="c-kpi-value">1 181 €</div>
+            <div class="c-kpi-sub">Fin : 1 981 €</div>
+          </div>
+        </div>
+
+        <div class="c-bars">
+          <div class="c-bars-title">Dépenses par catégorie</div>
+          <div class="c-bar-row">
+            <span class="c-bar-label">Logement</span>
+            <div class="c-bar-track"><div class="c-bar-fill" style="width:100%;background:#4f46e5"></div></div>
+            <span class="c-bar-amount">760 €</span>
+          </div>
+          <div class="c-bar-row">
+            <span class="c-bar-label">Alimentation</span>
+            <div class="c-bar-track"><div class="c-bar-fill" style="width:52%;background:#00b37e"></div></div>
+            <span class="c-bar-amount">395 €</span>
+          </div>
+          <div class="c-bar-row">
+            <span class="c-bar-label">Restos / Bars</span>
+            <div class="c-bar-track"><div class="c-bar-fill" style="width:42%;background:#f59e0b"></div></div>
+            <span class="c-bar-amount">320 €</span>
+          </div>
+          <div class="c-bar-row">
+            <span class="c-bar-label">Abonnements</span>
+            <div class="c-bar-track"><div class="c-bar-fill" style="width:24%;background:#8b5cf6"></div></div>
+            <span class="c-bar-amount">183 €</span>
+          </div>
+        </div>
+
+        <div class="c-txns">
+          <div class="c-txn-row">
+            <span class="c-date">28 mai</span>
+            <span class="c-libelle">Seres Technologies</span>
+            <span class="c-badge c-badge-salary">Salaire</span>
+            <span class="c-amount credit">+2 850 €</span>
+          </div>
+          <div class="c-txn-row">
+            <span class="c-date">05 mai</span>
+            <span class="c-libelle">Oiko Gestion — Loyer</span>
+            <span class="c-badge c-badge-logement">Logement</span>
+            <span class="c-amount debit">−660 €</span>
+          </div>
+          <div class="c-txn-row">
+            <span class="c-date">12 mai</span>
+            <span class="c-libelle">Carrefour City</span>
+            <span class="c-badge c-badge-food">Alimentation</span>
+            <span class="c-amount debit">−47 €</span>
+          </div>
+          <div class="c-txn-row">
+            <span class="c-date">19 mai</span>
+            <span class="c-libelle">⚠ PRLV SEPA 247891XK</span>
+            <span class="c-badge c-badge-uncategorized">À taguer</span>
+            <span class="c-amount" style="color:#d97706">−29 €</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="option-desc">
+      <strong>Style :</strong> Blanc immaculé, accent vert émeraude, badges pastels. Inspiré Finary / N26. Typo DM Sans. Le plus moderne et app-like.
+    </div>
+  </div>
+
+</div>
+
+<div class="choice-bar">
+  <button class="choice-btn">→ A — Blanc Linear</button>
+  <button class="choice-btn">→ B — Crème & chaud</button>
+  <button class="choice-btn">→ C — Blanc · Vert Finary</button>
+</div>
+
+</body>
+</html>

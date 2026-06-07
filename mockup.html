@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finances — Victor Michel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --white: #ffffff;
+    --border: #ebebeb;
+    --border-2: #f2f2f2;
+    --text: #111111;
+    --muted: #999999;
+    --muted-2: #bbbbbb;
+    --green: #00b37e;
+    --green-bg: #f0fdf8;
+    --green-border: #c6f0e2;
+    --red: #e53e3e;
+    --red-bg: #fff5f5;
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --blue: #4f46e5;
+    --blue-bg: #eef2ff;
+    --sidebar-w: 210px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+  }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border-2);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo span { color: var(--green); }
+
+  .logo-avatar {
+    width: 28px; height: 28px;
+    background: var(--green-bg);
+    border: 1.5px solid var(--green-border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green);
+    flex-shrink: 0;
+  }
+
+  .nav { padding: 12px 10px; flex: 1; }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted-2);
+    padding: 0 8px;
+    margin: 12px 0 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-bottom: 1px;
+  }
+
+  .nav-item:hover { background: var(--bg); color: var(--text); }
+
+  .nav-item.active {
+    background: var(--green-bg);
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  .nav-icon { font-size: 14px; width: 16px; text-align: center; opacity: 0.8; }
+
+  .nav-releve {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-bottom: 1px;
+  }
+
+  .nav-releve:hover { background: var(--bg); color: var(--text); }
+  .nav-releve.active { color: var(--text); font-weight: 600; }
+
+  .nav-releve-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green-border);
+    flex-shrink: 0;
+  }
+
+  .nav-releve.active .nav-releve-dot { background: var(--green); }
+
+  .sidebar-footer {
+    padding: 16px 10px;
+    border-top: 1px solid var(--border-2);
+  }
+
+  .import-btn {
+    width: 100%;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 10px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: opacity 0.15s;
+  }
+
+  .import-btn:hover { opacity: 0.88; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Topbar */
+  .topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .topbar-left { display: flex; align-items: baseline; gap: 10px; }
+
+  .topbar-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .topbar-period {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .period-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 7px 13px;
+    background: var(--white);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+
+  .period-select:hover { border-color: #ddd; }
+
+  .period-select select {
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .period-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+  /* Content */
+  .content { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* KPI Row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+
+  .kpi-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .kpi-card:hover {
+    border-color: #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--muted-2);
+    margin-bottom: 10px;
+  }
+
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.red { color: var(--red); }
+
+  .kpi-sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    gap: 3px;
+  }
+
+  .pill-up { background: var(--green-bg); color: var(--green); }
+  .pill-dn { background: var(--red-bg); color: var(--red); }
+  .pill-neutral { background: #f5f5f5; color: #888; }
+
+  /* Panels */
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 15px 20px 13px;
+    border-bottom: 1px solid var(--border-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .panel-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+
+  .panel-meta {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* Panel row: 2 panels side by side */
+  .panels-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 14px;
+  }
+
+  /* Category bars */
+  .cat-body { padding: 16px 20px 20px; }
+
+  .cat-row {
+    display: grid;
+    grid-template-columns: 108px 1fr 60px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 11px;
+  }
+
+  .cat-row:last-child { margin-bottom: 0; }
+
+  .cat-label { font-size: 12.5px; color: #444; font-weight: 500; }
+
+  .cat-track {
+    height: 6px;
+    background: #f2f2f2;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .cat-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(.16,1,.3,1); }
+
+  .cat-amount {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Chart body */
+  .chart-body { padding: 16px 20px 18px; height: 220px; position: relative; }
+
+  /* Uncategorized banner */
+  .banner {
+    border-radius: 10px;
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .banner-left { display: flex; align-items: center; gap: 12px; }
+
+  .banner-icon {
+    width: 34px; height: 34px;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .banner-text strong { display: block; font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 2px; }
+  .banner-text span { font-size: 12px; color: #b45309; }
+
+  .tag-btn {
+    background: var(--amber);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 12.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+
+  .tag-btn:hover { opacity: 0.88; }
+
+  /* Transactions table — Panel 1 */
+  .txn-filters {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+
+  .chip:hover { color: var(--text); border-color: #ddd; }
+  .chip.active { background: var(--green-bg); color: var(--green); border-color: var(--green-border); font-weight: 600; }
+  .chip.warn { border-color: #fde68a; color: var(--amber); }
+
+  .txn-search {
+    margin-left: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    width: 180px;
+    transition: border-color 0.15s;
+  }
+
+  .txn-search::placeholder { color: var(--muted-2); }
+  .txn-search:focus { border-color: #ccc; background: white; }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--muted-2);
+    border-bottom: 1px solid var(--border-2);
+    background: #fafafa;
+  }
+
+  thead th:last-child { text-align: right; }
+
+  tbody tr { transition: background 0.1s; }
+  tbody tr:hover { background: #fafafa; }
+
+  tbody td {
+    padding: 11px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-2);
+    font-size: 13px;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  .td-date {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    white-space: nowrap;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .td-libelle { font-weight: 500; color: var(--text); }
+  .td-raw { font-size: 10.5px; color: var(--muted-2); margin-top: 1px; font-family: 'DM Mono', monospace; }
+  .td-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 13px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+  .b-salaire   { background: #f0fdf8; color: #00b37e; }
+  .b-logement  { background: #eef2ff; color: #4f46e5; }
+  .b-alim      { background: #f0fdf4; color: #16a34a; }
+  .b-restos    { background: #fff7ed; color: #ea580c; }
+  .b-transport { background: #fdf4ff; color: #9333ea; }
+  .b-abonns    { background: #faf5ff; color: #7c3aed; }
+  .b-epargne   { background: #f0fdf8; color: #059669; }
+  .b-remb      { background: #f8fafc; color: #64748b; }
+  .b-uncategorized { background: #fffbeb; color: #d97706; }
+
+  .cr { color: var(--green); }
+  .dr { color: var(--red); }
+  .ne { color: var(--muted); }
+
+  .uncategorized-row td { background: #fffdf5; }
+  .uncategorized-row:hover td { background: #fffbeb !important; }
+
+  /* Import overlay */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+
+  .overlay.active { display: flex; }
+
+  .modal {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 480px;
+    max-width: 95vw;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+
+  .modal-title { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+
+  .drop-zones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 22px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .drop-zone:hover {
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+
+  .drop-zone-icon { font-size: 22px; margin-bottom: 8px; }
+  .drop-zone-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .drop-zone-sub { font-size: 11px; color: var(--muted); }
+
+  .modal-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 14px;
+    transition: color 0.12s;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  .analyze-btn {
+    width: 100%;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .analyze-btn:hover { opacity: 0.88; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-avatar">VM</div>
+      mes<span>finances</span>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">Menu</div>
+      <div class="nav-item active"><span class="nav-icon">▦</span> Dashboard</div>
+      <div class="nav-item" onclick="openImport()"><span class="nav-icon">↑</span> Import PDF</div>
+      <div class="nav-item"><span class="nav-icon">◎</span> Historique</div>
+
+      <div class="nav-label" style="margin-top:16px">Relevés</div>
+      <div class="nav-releve active">
+        <div class="nav-releve-dot"></div>
+        Mai 2026
+      </div>
+      <div class="nav-releve"><div class="nav-releve-dot"></div>Avr. 2026</div>
+      <div class="nav-releve"><div class="nav-releve-dot"></div>Mars 2026</div>
+      <div class="nav-releve"><div class="nav-releve-dot"></div>Fév. 2026</div>
+      <div class="nav-releve"><div class="nav-releve-dot"></div>Jan. 2026</div>
+      <div class="nav-releve"><div class="nav-releve-dot"></div>Déc. 2025</div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="import-btn" onclick="openImport()">
+        + Importer un relevé
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">Mai 2026</span>
+        <span class="topbar-period">04/05/2026 → 04/06/2026</span>
+      </div>
+      <div class="period-select">
+        <div class="period-dot"></div>
+        <select>
+          <option>Mai 2026</option>
+          <option>Avr. 2026</option>
+          <option>Mars 2026</option>
+          <option>Fév. 2026</option>
+          <option>Jan. 2026</option>
+          <option>Déc. 2025</option>
+        </select>
+        ▾
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Revenus nets</div>
+          <div class="kpi-value green">3 420 €</div>
+          <div class="kpi-sub"><span class="pill pill-up">↑ +2.1%</span> vs mois préc.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Charges fixes</div>
+          <div class="kpi-value">1 187 €</div>
+          <div class="kpi-sub">Loyer · SFR · PEL · Prêt</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Dépenses variables</div>
+          <div class="kpi-value red">1 052 €</div>
+          <div class="kpi-sub"><span class="pill pill-dn">↑ +8.4%</span> vs mois préc.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Solde net du mois</div>
+          <div class="kpi-value">1 181 €</div>
+          <div class="kpi-sub"><span class="pill pill-neutral">Fin : 1 981,16 €</span></div>
+        </div>
+      </div>
+
+      <!-- Banner -->
+      <div class="banner">
+        <div class="banner-left">
+          <div class="banner-icon">⚠</div>
+          <div class="banner-text">
+            <strong>3 transactions non catégorisées</strong>
+            <span>Non incluses dans les totaux — à taguer manuellement.</span>
+          </div>
+        </div>
+        <button class="tag-btn">Catégoriser →</button>
+      </div>
+
+      <!-- Charts row -->
+      <div class="panels-row">
+
+        <!-- Catégories -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Dépenses par catégorie</span>
+            <span class="panel-meta">Mai 2026</span>
+          </div>
+          <div class="cat-body">
+            <div class="cat-row">
+              <span class="cat-label">Logement</span>
+              <div class="cat-track"><div class="cat-fill" style="width:100%;background:#4f46e5"></div></div>
+              <span class="cat-amount">760 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Alimentation</span>
+              <div class="cat-track"><div class="cat-fill" style="width:52%;background:#00b37e"></div></div>
+              <span class="cat-amount">395 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Restos / Bars</span>
+              <div class="cat-track"><div class="cat-fill" style="width:42%;background:#f59e0b"></div></div>
+              <span class="cat-amount">320 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Abonnements</span>
+              <div class="cat-track"><div class="cat-fill" style="width:24%;background:#8b5cf6"></div></div>
+              <span class="cat-amount">183 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Transport</span>
+              <div class="cat-track"><div class="cat-fill" style="width:18%;background:#ec4899"></div></div>
+              <span class="cat-amount">138 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Shopping</span>
+              <div class="cat-track"><div class="cat-fill" style="width:15%;background:#f97316"></div></div>
+              <span class="cat-amount">112 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Épargne</span>
+              <div class="cat-track"><div class="cat-fill" style="width:13%;background:#06b6d4"></div></div>
+              <span class="cat-amount">100 €</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Santé</span>
+              <div class="cat-track"><div class="cat-fill" style="width:7%;background:#14b8a6"></div></div>
+              <span class="cat-amount">54 €</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Évolution du solde net</span>
+            <span class="panel-meta">6 derniers relevés</span>
+          </div>
+          <div class="chart-body">
+            <canvas id="histChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Transactions panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Transactions</span>
+          <span class="panel-meta">47 opérations · Mai 2026</span>
+        </div>
+
+        <div class="txn-filters">
+          <div class="chip active">Toutes</div>
+          <div class="chip">Logement</div>
+          <div class="chip">Alimentation</div>
+          <div class="chip">Restos</div>
+          <div class="chip">Transport</div>
+          <div class="chip">Shopping</div>
+          <div class="chip warn">⚠ Non catégorisées (3)</div>
+          <input class="txn-search" type="text" placeholder="Rechercher…">
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width:80px">Date</th>
+              <th>Libellé</th>
+              <th style="width:160px">Catégorie</th>
+              <th style="width:120px">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="td-date">28/05</span></td>
+              <td>
+                <div class="td-libelle">Virement Seres Technologies</div>
+                <div class="td-raw">VIR SERES TECHNOLOGIES</div>
+              </td>
+              <td><span class="badge b-salaire"><span class="badge-dot" style="background:#00b37e"></span>Salaire</span></td>
+              <td class="td-amount cr">+2 850,00 €</td>
+            </tr>
+            <tr>
+              <td><span class="td-date">22/05</span></td>
+              <td>
+                <div class="td-libelle">Rembt. Luana Di Carlo</div>
+                <div class="td-raw">VIR LUANA DI CARLO</div>
+              </td>
+              <td><span class="badge b-remb"><span class="badge-dot" style="background:#94a3b8"></span>Rembt. Coloc</span></td>
+              <td class="td-amount ne">+650,00 €</td>
+            </tr>
+            <tr>
+              <td><span class="td-date">20/05</span></td>
+              <td>
+                <div class="td-libelle">Netflix</div>
+                <div class="td-raw">PRLV NETFLIX.COM</div>
+              </td>
+              <td><span class="badge b-abonns"><span class="badge-dot" style="background:#7c3aed"></span>Abonnements</span></td>
+              <td class="td-amount dr">−17,99 €</td>
+            </tr>
+            <tr class="uncategorized-row">
+              <td><span class="td-date">19/05</span></td>
+              <td>
+                <div class="td-libelle" style="color:#d97706">⚠ Paiement inconnu</div>
+                <div class="td-raw">PRLV SEPA 247891XK</div>
+              </td>
+              <td><span class="badge b-uncategorized"><span class="badge-dot" style="background:#d97706"></span>À taguer</span></td>
+              <td class="td-amount" style="color:#d97706;text-align:right">−29,99 €</td>
+            </tr>
+            <tr>
+              <td><span class="td-date">16/05</span></td>
+              <td>
+                <div class="td-libelle">Le Comptoir des Vins</div>
+                <div class="td-raw">CARTE COMPTOIR VINS M</div>
+              </td>
+              <td><span class="badge b-restos"><span class="badge-dot" style="background:#ea580c"></span>Restos / Bars</span></td>
+              <td class="td-amount dr">−38,00 €</td>
+            </tr>
+            <tr>
+              <td><span class="td-date">14/05</span></td>
+              <td>
+                <div class="td-libelle">Lime — Trottinette</div>
+                <div class="td-raw">LIME NETWORKS</div>
+              </td>
+              <td><span class="badge b-transport"><span class="badge-dot" style="background:#9333ea"></span>Transport</span></td>
+              <td class="td-amount dr">−14,40 €</td>
+            </tr>
+            <tr>
+              <td><span class="td-date">12/05</span></td>
+              <td>
+                <div class="td-libelle">Carrefour City Marseille</div>
+                <div class="td-raw">CARTE CARREFOUR CITY</div>
+              </td>
+              <td><span class="badge b-alim"><span class="badge-dot" style="background:#16a34a"></span>Alimentation</span></td>
+              <td class="td-amount dr">−47,30 €</td>
+            </tr>
+            <tr>
+              <td><span class="td-date">05/05</span></td>
+              <td>
+                <div class="td-libelle">Loyer Oiko Gestion</div>
+                <div class="td-raw">VIR OIKO GESTION IMMO</div>
+              </td>
+              <td><span class="badge b-logement"><span class="badge-dot" style="background:#4f46e5"></span>Logement</span></td>
+              <td class="td-amount dr">−660,00 €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- Import overlay -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal">
+    <div class="modal-close" onclick="closeOverlayDirect()">✕</div>
+    <div class="modal-title">Importer un relevé</div>
+    <div class="modal-sub">Déposez vos PDFs — Claude extrait et catégorise automatiquement.</div>
+    <div class="drop-zones">
+      <div class="drop-zone">
+        <div class="drop-zone-icon">🏦</div>
+        <div class="drop-zone-label">Relevé bancaire</div>
+        <div class="drop-zone-sub">PDF Crédit Agricole</div>
+      </div>
+      <div class="drop-zone">
+        <div class="drop-zone-icon">📄</div>
+        <div class="drop-zone-label">Bulletin de salaire</div>
+        <div class="drop-zone-sub">PDF optionnel</div>
+      </div>
+    </div>
+    <button class="analyze-btn">✦ Analyser avec Claude</button>
+  </div>
+</div>
+
+<script>
+const ctx = document.getElementById('histChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['Déc 25','Jan 26','Fév 26','Mar 26','Avr 26','Mai 26'],
+    datasets: [{
+      data: [1714.87, 1844.68, 6641.71, 2167.10, 2981.45, 1981.16],
+      borderColor: '#00b37e',
+      backgroundColor: 'rgba(0,179,126,0.07)',
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: '#ffffff',
+      pointBorderColor: '#00b37e',
+      pointBorderWidth: 2,
+      tension: 0.35,
+      fill: true,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#ffffff',
+        borderColor: '#ebebeb',
+        borderWidth: 1,
+        titleColor: '#999',
+        titleFont: { family: 'DM Sans', size: 11 },
+        bodyColor: '#111',
+        bodyFont: { family: 'DM Sans', size: 14, weight: '700' },
+        padding: 10,
+        callbacks: {
+          label: c => ` ${c.parsed.y.toLocaleString('fr-FR', {minimumFractionDigits:2})} €`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#f5f5f5', drawBorder: false },
+        ticks: { color: '#bbb', font: { family: 'DM Sans', size: 11 } }
+      },
+      y: {
+        grid: { color: '#f5f5f5', drawBorder: false },
+        ticks: {
+          color: '#bbb',
+          font: { family: 'DM Sans', size: 11 },
+          callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k €' : v+'€'
+        }
+      }
+    }
+  }
+});
+
+function openImport() { document.getElementById('overlay').classList.add('active'); }
+function closeOverlayDirect() { document.getElementById('overlay').classList.remove('active'); }
+function closeOverlay(e) { if (e.target === document.getElementById('overlay')) closeOverlayDirect(); }
+</script>
+</body>
+</html>
