@@ -101,52 +101,25 @@ export function TransactionList({ transactions }: TransactionListProps) {
   return (
     <>
       {/* Toolbar */}
-      <div className="px-5 py-3 border-b border-[#f2f2f2] flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => { setFilter('all'); setSearch('') }}
-          className={`px-3 py-1 rounded-full text-[12px] font-medium border transition-all ${
-            filter === 'all'
-              ? 'bg-[#f0fdf8] text-[#00b37e] border-[#c6f0e2]'
-              : 'bg-transparent text-[#999] border-[#ebebeb] hover:text-[#111] hover:border-[#ddd]'
-          }`}
+      <div className="px-5 py-2.5 border-b border-[#f2f2f2] flex items-center gap-2">
+        <select
+          value={filter}
+          onChange={e => { setFilter(e.target.value); setGrouped(e.target.value === 'all') }}
+          className="border border-[#ebebeb] rounded-lg px-2.5 py-1.5 text-[12.5px] bg-[#f7f7f5] outline-none focus:border-[#ccc] focus:bg-white transition-all cursor-pointer"
         >
-          Toutes
-        </button>
-
-        {presentCats.filter(c => c !== 'NON_CATEGORISE').map(cat => (
-          <button
-            key={cat}
-            onClick={() => { setFilter(cat); setGrouped(false) }}
-            className={`px-3 py-1 rounded-full text-[12px] font-medium border transition-all ${
-              filter === cat ? 'font-semibold' : 'bg-transparent text-[#999] border-[#ebebeb] hover:text-[#111] hover:border-[#ddd]'
-            }`}
-            style={filter === cat ? {
-              background: (CATEGORIE_COLORS[cat as Categorie] ?? '#ccc') + '18',
-              color: CATEGORIE_COLORS[cat as Categorie] ?? '#333',
-              borderColor: (CATEGORIE_COLORS[cat as Categorie] ?? '#ccc') + '55',
-            } : {}}
-          >
-            {CATEGORIE_LABELS[cat as Categorie] ?? cat}
-          </button>
-        ))}
-
-        {uncategorizedCount > 0 && (
-          <button
-            onClick={() => { setFilter('uncategorized'); setGrouped(false) }}
-            className={`px-3 py-1 rounded-full text-[12px] font-medium border transition-all ${
-              filter === 'uncategorized'
-                ? 'bg-[#fffbeb] text-[#d97706] border-[#fde68a]'
-                : 'bg-transparent text-[#d97706] border-[#fde68a] hover:bg-[#fffbeb]'
-            }`}
-          >
-            ⚠ À taguer ({uncategorizedCount})
-          </button>
-        )}
+          <option value="all">Toutes les catégories</option>
+          {presentCats.filter(c => c !== 'NON_CATEGORISE').map(cat => (
+            <option key={cat} value={cat}>{CATEGORIE_LABELS[cat as Categorie] ?? cat}</option>
+          ))}
+          {uncategorizedCount > 0 && (
+            <option value="uncategorized">⚠ À taguer ({uncategorizedCount})</option>
+          )}
+        </select>
 
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => { setGrouped(g => !g); setFilter('all'); setSearch('') }}
-            className={`px-3 py-1 rounded-lg text-[12px] font-medium border transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all ${
               grouped
                 ? 'bg-[#f0fdf8] text-[#00b37e] border-[#c6f0e2]'
                 : 'bg-transparent text-[#999] border-[#ebebeb] hover:text-[#111]'
@@ -164,7 +137,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[#fafafa]">

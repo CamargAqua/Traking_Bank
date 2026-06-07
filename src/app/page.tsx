@@ -4,14 +4,9 @@ import { KPICard } from '@/components/KPICard'
 import { CategoryChart } from '@/components/CategoryChart'
 import { TransactionList } from '@/components/TransactionList'
 import { HistoryChart } from '@/components/HistoryChart'
-import { EvolutionChart } from '@/components/EvolutionChart'
 import { REVENUS, CHARGES_FIXES, EXCLUS, CATEGORIE_LABELS, CATEGORIE_COLORS, type Categorie } from '@/lib/categories'
 import Link from 'next/link'
 import { PeriodSelector } from '@/components/PeriodSelector'
-
-const EVOLUTION_CATS: Categorie[] = [
-  'RESTOS_BARS', 'ALIMENTATION', 'TRANSPORT', 'SHOPPING', 'SANTE', 'CASH_DAB', 'ABONNEMENT',
-]
 
 interface PageProps {
   searchParams: Promise<{ releve?: string }>
@@ -26,14 +21,6 @@ async function getReleveData(id: string) {
     where: { id },
     include: { transactions: { orderBy: { date: 'desc' } } },
   })
-}
-
-async function getAllTransactionsByPeriode() {
-  const releves = await prisma.releve.findMany({
-    orderBy: { dateDebut: 'asc' },
-    include: { transactions: { where: { exclure: false } } },
-  })
-  return releves
 }
 
 async function getBulletins() {
@@ -63,24 +50,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const releve = activeId ? await getReleveData(activeId) : null
   const history = releves.map(r => ({ periode: r.periode, soldeFin: r.soldeFin }))
 
-  const [allReleves, bulletins] = await Promise.all([
-    getAllTransactionsByPeriode(),
-    getBulletins(),
-  ])
-
-  // Evolution chart data — variable spending per period
-  const evolutionData = allReleves.map(r => {
-    const point: { periode: string; [cat: string]: number | string } = { periode: r.periode }
-    for (const cat of EVOLUTION_CATS) {
-      point[cat] = r.transactions
-        .filter(t => t.categorie === cat && t.montant < 0)
-        .reduce((s, t) => s + Math.abs(t.montant), 0)
-    }
-    return point
-  })
-  const activeCats = EVOLUTION_CATS.filter(cat =>
-    evolutionData.some(d => (d[cat] as number) > 0)
-  )
+  const bulletins = await getBulletins()
 
   // Bulletin for current period
   const bulletinActuel = releve ? bulletins.find(b => b.periode === releve.periode) : null
@@ -130,10 +100,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const uncategorizedCount = actives.filter(t => t.categorie === 'NON_CATEGORISE').length
 
   // ── Charges fixes breakdown ───────────────────────────────────────────────
-  const chargesDetail = CHARGES_FIXES.map(cat => ({
-    cat,
-    total: actives.filter(t => t.categorie === cat && t.montant < 0).reduce((s, t) => s + Math.abs(t.montant), 0),
-  })).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
+  const chargesDetail = CHARGES_FIXES.map(cat => {
+    const txs = actives.filter(t => t.categorie === cat && t.montant < 0)
+    return {
+      cat,
+      total: txs.reduce((s, t) => s + Math.abs(t.montant), 0),
+      tooltip: txs.map(t => `${t.libelle}: ${fmtAmountShort(Math.abs(t.montant))}`).join('\n'),
+    }
+  }).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
   const chargesMax = chargesDetail[0]?.total ?? 1
 
   // ── Catégories chart ──────────────────────────────────────────────────────
@@ -146,19 +120,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 
-  // ── Top marchands ─────────────────────────────────────────────────────────
-  const merchantMap = new Map<string, number>()
-  actives
-    .filter(t => t.montant < 0 && !EXCLUS.includes(t.categorie as Categorie))
-    .forEach(t => {
-      const key = t.libelle
-      merchantMap.set(key, (merchantMap.get(key) ?? 0) + Math.abs(t.montant))
-    })
-  const topMerchants = [...merchantMap.entries()]
-    .map(([libelle, total]) => ({ libelle, total }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 8)
-  const topMax = topMerchants[0]?.total ?? 1
 
   return (
     <div className="flex min-h-screen">
@@ -186,7 +147,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
           {/* KPIs row 1 */}
           <div className="grid grid-cols-4 gap-3.5">
-            <KPICard label="Revenus encaissés" value={fmtAmount(revenus)} color="green" sub="salaire + frais + remboursements" />
+            <KPICard label="Revenus encaissés" value={fmtAmount(revenus)} color="green" sub="salaire fixe + variable" />
             <KPICard label="Charges fixes" value={fmtAmount(chargesFixes)} sub={`${tauxCharges}% des revenus`} />
             <KPICard label="Dépenses variables" value={fmtAmount(depensesVariables)} color={depensesVariables > revenus * 0.4 ? 'red' : 'default'} sub="restos, courses, transport…" />
             <KPICard label="Solde net du mois" value={fmtAmount(soldeNet)} color={soldeNet >= 0 ? 'default' : 'red'} sub={`Fin de mois : ${fmtAmount(releve?.soldeFin ?? 0)}`} />
@@ -217,18 +178,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     <span className="text-[13px] font-semibold text-[#10b981]">+{fmtAmount(notesFrais)}</span>
                   </div>
                 )}
-                {remboursements > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12.5px] text-[#555]">Remboursements</span>
-                    <span className="text-[13px] font-semibold text-[#64748b]">+{fmtAmount(remboursements)}</span>
-                  </div>
-                )}
-                {revenuExceptionnel > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12.5px] text-[#555]">Exceptionnel</span>
-                    <span className="text-[13px] font-semibold text-[#0ea5e9]">+{fmtAmount(revenuExceptionnel)}</span>
-                  </div>
-                )}
                 <div className="border-t border-[#f2f2f2] mt-1 pt-2 flex items-center justify-between">
                   <span className="text-[12px] font-bold text-[#111]">Total</span>
                   <span className="text-[14px] font-bold text-[#00b37e]">+{fmtAmount(revenus)}</span>
@@ -240,8 +189,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
               <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-3">Charges fixes</div>
               <div className="flex flex-col gap-2.5">
-                {chargesDetail.map(({ cat, total }) => (
-                  <div key={cat}>
+                {chargesDetail.map(({ cat, total, tooltip }) => (
+                  <div key={cat} title={tooltip} className="cursor-help">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[11.5px] text-[#555]">{CATEGORIE_LABELS[cat as Categorie]}</span>
                       <span className="text-[11.5px] font-semibold text-[#111]">{fmtAmountShort(total)}</span>
@@ -325,90 +274,37 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          {/* Évolution multi-mois + Bulletin de salaire */}
-          <div className="grid gap-3.5" style={{ gridTemplateColumns: bulletinActuel ? '1.6fr 1fr' : '1fr' }}>
-
-            {/* Evolution chart */}
+          {/* Bulletin de salaire (si importé pour ce mois) */}
+          {bulletinActuel && (
             <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
-                <span className="text-[13.5px] font-bold tracking-[-0.2px]">Évolution dépenses variables</span>
-                <span className="text-[11.5px] text-[#999]">{allReleves.length} mois</span>
+                <span className="text-[13.5px] font-bold tracking-[-0.2px]">Bulletin de salaire</span>
+                <span className="text-[11.5px] text-[#999]">{bulletinActuel.periode}</span>
               </div>
-              <div className="p-5">
-                <EvolutionChart data={evolutionData} categories={activeCats} />
-              </div>
-            </div>
-
-            {/* Bulletin de salaire */}
-            {bulletinActuel ? (
-              <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
-                  <span className="text-[13.5px] font-bold tracking-[-0.2px]">Bulletin de salaire</span>
-                  <span className="text-[11.5px] text-[#999]">{bulletinActuel.periode}</span>
+              <div className="p-5 grid grid-cols-4 gap-5">
+                <div>
+                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-1.5">Brut fixe</div>
+                  <div className="text-[18px] font-bold tracking-[-0.5px]">{fmtAmount(bulletinActuel.salaireBrutFixe)}</div>
                 </div>
-                <div className="p-5 flex flex-col gap-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[12.5px] text-[#555]">Brut fixe</span>
-                    <span className="text-[13px] font-semibold">{fmtAmount(bulletinActuel.salaireBrutFixe)}</span>
+                {bulletinActuel.salaireBrutVar > 0 && (
+                  <div>
+                    <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-1.5">Variable</div>
+                    <div className="text-[18px] font-bold tracking-[-0.5px] text-[#059669]">+{fmtAmount(bulletinActuel.salaireBrutVar)}</div>
                   </div>
-                  {bulletinActuel.salaireBrutVar > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-[12.5px] text-[#555]">Variable / prime</span>
-                      <span className="text-[13px] font-semibold text-[#059669]">+{fmtAmount(bulletinActuel.salaireBrutVar)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-[12.5px] text-[#555]">Cotisations salariales</span>
-                    <span className="text-[13px] font-semibold text-[#e53e3e]">−{fmtAmount(bulletinActuel.cotisations)}</span>
-                  </div>
-                  <div className="border-t border-[#f2f2f2] pt-3 flex justify-between items-center">
-                    <span className="text-[12px] font-bold text-[#111]">Net à payer</span>
-                    <span className="text-[16px] font-bold text-[#00b37e]">{fmtAmount(bulletinActuel.netAPayer)}</span>
-                  </div>
+                )}
+                <div>
+                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-1.5">Cotisations</div>
+                  <div className="text-[18px] font-bold tracking-[-0.5px] text-[#e53e3e]">−{fmtAmount(bulletinActuel.cotisations)}</div>
+                </div>
+                <div>
+                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-1.5">Net à payer</div>
+                  <div className="text-[18px] font-bold tracking-[-0.5px] text-[#00b37e]">{fmtAmount(bulletinActuel.netAPayer)}</div>
                   {salaire > 0 && (
-                    <div className="bg-[#f7f7f5] rounded-lg px-3 py-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11.5px] text-[#999]">Reçu en banque (Seres)</span>
-                        <span className={`text-[12px] font-semibold ${Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? 'text-[#00b37e]' : 'text-[#d97706]'}`}>
-                          {fmtAmount(salaire)}
-                        </span>
-                      </div>
-                      <div className="text-[10.5px] text-[#bbb] mt-0.5">
-                        Écart: {fmtAmount(Math.abs(salaire - bulletinActuel.netAPayer))}
-                        {Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? ' ✓' : ' ⚠ PAS'}
-                      </div>
+                    <div className={`text-[11px] mt-0.5 ${Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? 'text-[#00b37e]' : 'text-[#d97706]'}`}>
+                      Reçu: {fmtAmount(salaire)} {Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? '✓' : `(écart ${fmtAmountShort(Math.abs(salaire - bulletinActuel.netAPayer))})`}
                     </div>
                   )}
                 </div>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Top marchands */}
-          {topMerchants.length > 0 && (
-            <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
-                <span className="text-[13.5px] font-bold tracking-[-0.2px]">Top dépenses</span>
-                <span className="text-[11.5px] text-[#999]">par marchand</span>
-              </div>
-              <div className="p-5 grid grid-cols-2 gap-x-8 gap-y-2.5">
-                {topMerchants.map(({ libelle, total }, i) => (
-                  <div key={libelle}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[10.5px] text-[#bbb] w-4 shrink-0">#{i + 1}</span>
-                        <span className="text-[12.5px] text-[#333] truncate">{libelle}</span>
-                      </div>
-                      <span className="text-[12px] font-semibold text-[#555] shrink-0 ml-2">{fmtAmountShort(total)}</span>
-                    </div>
-                    <div className="h-1.5 bg-[#f2f2f2] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#f97316] rounded-full"
-                        style={{ width: `${Math.round((total / topMax) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}
