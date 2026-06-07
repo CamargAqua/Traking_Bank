@@ -5,6 +5,7 @@ import { CategoryChart } from '@/components/CategoryChart'
 import { TransactionList } from '@/components/TransactionList'
 import { HistoryChart } from '@/components/HistoryChart'
 import { REVENUS, CHARGES_FIXES, EXCLUS, CATEGORIE_LABELS, CATEGORIE_COLORS, type Categorie } from '@/lib/categories'
+import { ChargesAccordion } from '@/components/ChargesAccordion'
 import Link from 'next/link'
 import { PeriodSelector } from '@/components/PeriodSelector'
 
@@ -105,10 +106,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     return {
       cat,
       total: txs.reduce((s, t) => s + Math.abs(t.montant), 0),
-      tooltip: txs.map(t => `${t.libelle}: ${fmtAmountShort(Math.abs(t.montant))}`).join('\n'),
+      txs: txs.map(t => ({ libelle: t.libelle, montant: t.montant })),
     }
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
-  const chargesMax = chargesDetail[0]?.total ?? 1
 
   // ── Catégories chart ──────────────────────────────────────────────────────
   const catMap = new Map<string, number>()
@@ -185,56 +185,33 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               </div>
             </div>
 
-            {/* Charges fixes breakdown */}
+            {/* Charges fixes — accordion cliquable */}
             <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-3">Charges fixes</div>
-              <div className="flex flex-col gap-2.5">
-                {chargesDetail.map(({ cat, total, tooltip }) => (
-                  <div key={cat} title={tooltip} className="cursor-help">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11.5px] text-[#555]">{CATEGORIE_LABELS[cat as Categorie]}</span>
-                      <span className="text-[11.5px] font-semibold text-[#111]">{fmtAmountShort(total)}</span>
-                    </div>
-                    <div className="h-1.5 bg-[#f2f2f2] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${Math.round((total / chargesMax) * 100)}%`,
-                          background: CATEGORIE_COLORS[cat as Categorie] ?? '#ccc',
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-3">
+                Charges fixes · {fmtAmountShort(chargesFixes)}
               </div>
+              <ChargesAccordion items={chargesDetail} />
             </div>
 
-            {/* Épargne + Reste à vivre */}
-            <div className="bg-white border border-[#ebebeb] rounded-xl p-5 flex flex-col gap-4">
-              <div>
-                <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-2">Taux d&apos;épargne</div>
-                <div className="text-[28px] font-bold tracking-[-1px] text-[#06b6d4]">{tauxEpargne}%</div>
-                <div className="text-[11.5px] text-[#999] mt-0.5">{fmtAmount(epargne)} mis de côté</div>
-                <div className="h-2 bg-[#f2f2f2] rounded-full overflow-hidden mt-2">
-                  <div className="h-full bg-[#06b6d4] rounded-full transition-all" style={{ width: `${Math.min(tauxEpargne, 100)}%` }} />
-                </div>
+            {/* Reste à vivre */}
+            <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-2">Reste à vivre</div>
+              <div className={`text-[32px] font-bold tracking-[-1px] ${resteAVivre >= 0 ? 'text-[#111]' : 'text-[#e53e3e]'}`}>
+                {fmtAmount(resteAVivre)}
               </div>
-              <div className="border-t border-[#f2f2f2] pt-4">
-                <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-2">Reste à vivre</div>
-                <div className={`text-[24px] font-bold tracking-[-0.8px] ${resteAVivre >= 0 ? 'text-[#111]' : 'text-[#e53e3e]'}`}>
-                  {fmtAmount(resteAVivre)}
-                </div>
-                <div className="text-[11.5px] text-[#999] mt-0.5">après charges fixes</div>
-                <div className="h-2 bg-[#f2f2f2] rounded-full overflow-hidden mt-2">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${revenus > 0 ? Math.min(Math.round((resteAVivre / revenus) * 100), 100) : 0}%`,
-                      background: resteAVivre >= revenus * 0.5 ? '#00b37e' : resteAVivre >= revenus * 0.3 ? '#f59e0b' : '#e53e3e',
-                    }}
-                  />
-                </div>
+              <div className="text-[11.5px] text-[#999] mt-1">après charges fixes ({tauxCharges}% des revenus)</div>
+              <div className="h-2 bg-[#f2f2f2] rounded-full overflow-hidden mt-3">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${revenus > 0 ? Math.min(Math.round((resteAVivre / revenus) * 100), 100) : 0}%`,
+                    background: resteAVivre >= revenus * 0.5 ? '#00b37e' : resteAVivre >= revenus * 0.3 ? '#f59e0b' : '#e53e3e',
+                  }}
+                />
               </div>
+              {epargne > 0 && (
+                <div className="mt-3 text-[11.5px] text-[#999]">dont {fmtAmount(epargne)} en épargne (PEL)</div>
+              )}
             </div>
           </div>
 

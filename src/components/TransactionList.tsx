@@ -84,7 +84,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
         </div>
       </td>
       <td className="px-4 py-2.5">
-        {!grouped && <CategoryBadge categorie={t.categorie} />}
+        <CategoryBadge categorie={t.categorie} />
       </td>
       <td className="px-4 py-2.5 text-right">
         <span className={`text-[13px] font-semibold tabular-nums ${
@@ -100,39 +100,74 @@ export function TransactionList({ transactions }: TransactionListProps) {
 
   return (
     <>
-      {/* Toolbar */}
-      <div className="px-5 py-2.5 border-b border-[#f2f2f2] flex items-center gap-2">
-        <select
-          value={filter}
-          onChange={e => { setFilter(e.target.value); setGrouped(e.target.value === 'all') }}
-          className="border border-[#ebebeb] rounded-lg px-2.5 py-1.5 text-[12.5px] bg-[#f7f7f5] outline-none focus:border-[#ccc] focus:bg-white transition-all cursor-pointer"
-        >
-          <option value="all">Toutes les catégories</option>
-          {presentCats.filter(c => c !== 'NON_CATEGORISE').map(cat => (
-            <option key={cat} value={cat}>{CATEGORIE_LABELS[cat as Categorie] ?? cat}</option>
-          ))}
-          {uncategorizedCount > 0 && (
-            <option value="uncategorized">⚠ À taguer ({uncategorizedCount})</option>
-          )}
-        </select>
-
-        <div className="ml-auto flex items-center gap-2">
+      {/* Filter chips */}
+      <div className="px-4 pt-3 pb-2 border-b border-[#f2f2f2]">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
-            onClick={() => { setGrouped(g => !g); setFilter('all'); setSearch('') }}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all ${
-              grouped
-                ? 'bg-[#f0fdf8] text-[#00b37e] border-[#c6f0e2]'
-                : 'bg-transparent text-[#999] border-[#ebebeb] hover:text-[#111]'
+            onClick={() => { setFilter('all'); setSearch(''); setGrouped(true) }}
+            className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium border transition-all shrink-0 ${
+              filter === 'all'
+                ? 'bg-[#111] text-white border-[#111]'
+                : 'bg-transparent text-[#888] border-[#e5e5e5] hover:border-[#bbb] hover:text-[#333]'
             }`}
           >
-            Par catégorie
+            Tout
           </button>
-          <input
-            className="border border-[#ebebeb] rounded-lg px-3 py-1.5 text-[12.5px] bg-[#f7f7f5] outline-none focus:border-[#ccc] focus:bg-white w-40 transition-all"
-            placeholder="Rechercher…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setGrouped(false) }}
-          />
+
+          {presentCats.filter(c => c !== 'NON_CATEGORISE').map(cat => {
+            const color = CATEGORIE_COLORS[cat as Categorie] ?? '#ccc'
+            const active = filter === cat
+            return (
+              <button
+                key={cat}
+                onClick={() => { setFilter(cat); setGrouped(false); setSearch('') }}
+                className="px-2.5 py-1 rounded-full text-[11.5px] font-medium border transition-all shrink-0"
+                style={active ? {
+                  background: color,
+                  color: '#fff',
+                  borderColor: color,
+                } : {
+                  background: color + '12',
+                  color: color,
+                  borderColor: color + '40',
+                }}
+              >
+                {CATEGORIE_LABELS[cat as Categorie] ?? cat}
+              </button>
+            )
+          })}
+
+          {uncategorizedCount > 0 && (
+            <button
+              onClick={() => { setFilter('uncategorized'); setGrouped(false); setSearch('') }}
+              className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium border transition-all shrink-0 ${
+                filter === 'uncategorized'
+                  ? 'bg-[#d97706] text-white border-[#d97706]'
+                  : 'bg-[#fffbeb] text-[#d97706] border-[#fde68a]'
+              }`}
+            >
+              ⚠ À taguer ({uncategorizedCount})
+            </button>
+          )}
+
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { setGrouped(g => !g); setFilter('all'); setSearch('') }}
+              className={`px-2.5 py-1 rounded-lg text-[11.5px] font-medium border transition-all ${
+                grouped
+                  ? 'bg-[#f0fdf8] text-[#00b37e] border-[#c6f0e2]'
+                  : 'text-[#888] border-[#e5e5e5] hover:text-[#333]'
+              }`}
+            >
+              ≡ Par catégorie
+            </button>
+            <input
+              className="border border-[#ebebeb] rounded-lg px-3 py-1 text-[12px] bg-[#f7f7f5] outline-none focus:border-[#ccc] focus:bg-white w-36 transition-all"
+              placeholder="Rechercher…"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setGrouped(false) }}
+            />
+          </div>
         </div>
       </div>
 

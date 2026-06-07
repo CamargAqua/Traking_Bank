@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractTextFromPdf } from '@/lib/parsePdf'
-import { parseReleveWithClaude } from '@/lib/claude'
+import { parseReleveWithClaude, parseBulletinWithClaude } from '@/lib/claude'
 import { prisma } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
@@ -72,7 +72,41 @@ export async function POST(req: NextRequest) {
       include: { transactions: true },
     })
 
-    return NextResponse.json({ success: true, releve })
+    // Bulletin de salaire optionnel — cross-validation
+    let reconciliation: { match: boolean; netBulletin: number; netReleve: number } | null = null
+    const bulletinFile = formData.get('bulletin') as File | null
+    if (bulletinFile) {
+      try {
+        const bulletinBuffer = Buffer.from(await bulletinFile.arrayBuffer())
+        const bulletinText = await extractTextFromPdf(bulletinBuffer)
+        const parsedBulletin = await parseBulletinWithClaude(bulletinText)
+
+        // Stocker le bulletin (ignorer si déjà existant)
+        await prisma.bulletinSalaire.upsert({
+          where: { periode: parsedBulletin.periode },
+          update: { ...parsedBulletin },
+          create: { ...parsedBulletin },
+        })
+
+        // Comparer net bulletin vs virement Seres reçu en banque
+        const seresTx = releve.transactions.find(t =>
+          t.categorie === 'SALAIRE' && t.montant > 0
+        )
+        if (seresTx) {
+          const ecart = Math.abs(seresTx.montant - parsedBulletin.netAPayer)
+          reconciliation = {
+            match: ecart < 50,
+            netBulletin: parsedBulletin.netAPayer,
+            netReleve: seresTx.montant,
+          }
+        }
+        console.log('[parse-pdf] bulletin cross-validé — période:', parsedBulletin.periode, '| réconciliation:', reconciliation)
+      } catch (bulletinErr) {
+        console.warn('[parse-pdf] échec parse bulletin (non bloquant):', bulletinErr)
+      }
+    }
+
+    return NextResponse.json({ success: true, releve, reconciliation })
   } catch (err) {
     console.error('[parse-pdf]', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
