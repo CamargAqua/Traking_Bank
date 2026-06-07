@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Releve {
+  id           String        @id @default(cuid())
+  numero       Int           @unique
+  periode      String        // "2026-05"
+  dateDebut    DateTime
+  dateFin      DateTime
+  soldeDebut   Float
+  soldeFin     Float
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model Transaction {
+  id         String   @id @default(cuid())
+  releveId   String
+  date       DateTime
+  libelle    String
+  libelleRaw String
+  montant    Float
+  categorie  String
+  confiance  String   @default("haute") // haute | moyenne | basse
+  verifie    Boolean  @default(false)
+  exclure    Boolean  @default(false)   // virements internes, rembt coloc
+  notes      String?
+  releve     Releve   @relation(fields: [releveId], references: [id], onDelete: Cascade)
+}
+
+model RegleCategorie {
+  id        String   @id @default(cuid())
+  pattern   String   @unique
+  categorie String
+  createdAt DateTime @default(now())
+}
