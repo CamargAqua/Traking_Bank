@@ -79,11 +79,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const salaire = actives.filter(t => t.categorie === 'SALAIRE' && t.montant > 0).reduce((s, t) => s + t.montant, 0)
-  const notesFrais = actives.filter(t => t.categorie === 'NOTE_FRAIS' && t.montant > 0).reduce((s, t) => s + t.montant, 0)
-  const prime = actives.filter(t => t.categorie === 'PRIME' && t.montant > 0).reduce((s, t) => s + t.montant, 0)
-  const remboursements = actives.filter(t => t.categorie === 'REMBOURSEMENT_DIVERS' && t.montant > 0).reduce((s, t) => s + t.montant, 0)
-  const revenuExceptionnel = actives.filter(t => t.categorie === 'REVENU_EXCEPTIONNEL' && t.montant > 0).reduce((s, t) => s + t.montant, 0)
-  const revenus = salaire + notesFrais + prime + remboursements + revenuExceptionnel
+  const revenus = salaire
+
+  // Estimation fixe/variable depuis bulletin (proportion brute appliquée au net réel)
+  const brutTotal = bulletinActuel ? bulletinActuel.salaireBrutFixe + bulletinActuel.salaireBrutVar : 0
+  const netFixeEst = bulletinActuel && brutTotal > 0 ? salaire * (bulletinActuel.salaireBrutFixe / brutTotal) : salaire
+  const netVarEst  = bulletinActuel && brutTotal > 0 ? salaire * (bulletinActuel.salaireBrutVar  / brutTotal) : 0
+
+
 
   const chargesFixes = actives
     .filter(t => CHARGES_FIXES.includes(t.categorie as Categorie) && t.montant < 0)
@@ -147,7 +150,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
           {/* KPIs row 1 */}
           <div className="grid grid-cols-4 gap-3.5">
-            <KPICard label="Revenus encaissés" value={fmtAmount(revenus)} color="green" sub="salaire fixe + variable" />
+            <KPICard label="Revenus encaissés" value={fmtAmount(revenus)} color="green" sub={bulletinActuel && netVarEst > 0 ? `fixe ~${fmtAmountShort(netFixeEst)} · var ~${fmtAmountShort(netVarEst)}` : 'virement Seres'} />
+
             <KPICard label="Charges fixes" value={fmtAmount(chargesFixes)} sub={`${tauxCharges}% des revenus`} />
             <KPICard label="Dépenses variables" value={fmtAmount(depensesVariables)} color={depensesVariables > revenus * 0.4 ? 'red' : 'default'} sub="restos, courses, transport…" />
             <KPICard label="Solde net du mois" value={fmtAmount(soldeNet)} color={soldeNet >= 0 ? 'default' : 'red'} sub={`Fin de mois : ${fmtAmount(releve?.soldeFin ?? 0)}`} />
@@ -160,28 +164,30 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
               <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-3">Détail revenus</div>
               <div className="flex flex-col gap-2">
-                {salaire > 0 && (
+                {bulletinActuel && brutTotal > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12.5px] text-[#555]">Fixe net <span className="text-[10px] text-[#ccc]">(estimé)</span></span>
+                      <span className="text-[13px] font-semibold text-[#00b37e]">+{fmtAmount(netFixeEst)}</span>
+                    </div>
+                    {netVarEst > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12.5px] text-[#555]">Variable net <span className="text-[10px] text-[#ccc]">(estimé)</span></span>
+                        <span className="text-[13px] font-semibold text-[#059669]">+{fmtAmount(netVarEst)}</span>
+                      </div>
+                    )}
+                  </>
+                ) : salaire > 0 ? (
                   <div className="flex items-center justify-between">
                     <span className="text-[12.5px] text-[#555]">Salaire</span>
                     <span className="text-[13px] font-semibold text-[#00b37e]">+{fmtAmount(salaire)}</span>
                   </div>
-                )}
-                {prime > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12.5px] text-[#555]">Prime / variable</span>
-                    <span className="text-[13px] font-semibold text-[#059669]">+{fmtAmount(prime)}</span>
-                  </div>
-                )}
-                {notesFrais > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12.5px] text-[#555]">Notes de frais</span>
-                    <span className="text-[13px] font-semibold text-[#10b981]">+{fmtAmount(notesFrais)}</span>
-                  </div>
-                )}
+                ) : null}
                 <div className="border-t border-[#f2f2f2] mt-1 pt-2 flex items-center justify-between">
-                  <span className="text-[12px] font-bold text-[#111]">Total</span>
+                  <span className="text-[12px] font-bold text-[#111]">Reçu</span>
                   <span className="text-[14px] font-bold text-[#00b37e]">+{fmtAmount(revenus)}</span>
                 </div>
+
               </div>
             </div>
 
@@ -274,11 +280,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                   <div className="text-[18px] font-bold tracking-[-0.5px] text-[#e53e3e]">−{fmtAmount(bulletinActuel.cotisations)}</div>
                 </div>
                 <div>
-                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-1.5">Net à payer</div>
-                  <div className="text-[18px] font-bold tracking-[-0.5px] text-[#00b37e]">{fmtAmount(bulletinActuel.netAPayer)}</div>
+                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-1.5">Net payé</div>
+
+
+                  <div className="text-[18px] font-bold tracking-[-0.5px] text-[#00b37e]">{fmtAmount(bulletinActuel.netVerse)}</div>
+
                   {salaire > 0 && (
-                    <div className={`text-[11px] mt-0.5 ${Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? 'text-[#00b37e]' : 'text-[#d97706]'}`}>
-                      Reçu: {fmtAmount(salaire)} {Math.abs(salaire - bulletinActuel.netAPayer) < 50 ? '✓' : `(écart ${fmtAmountShort(Math.abs(salaire - bulletinActuel.netAPayer))})`}
+                    <div className={`text-[11px] mt-0.5 ${Math.abs(salaire - bulletinActuel.netVerse) < 50 ? 'text-[#00b37e]' : 'text-[#d97706]'}`}>
+                      Reçu: {fmtAmount(salaire)} {Math.abs(salaire - bulletinActuel.netVerse) < 50 ? '✓' : `(écart ${fmtAmountShort(Math.abs(salaire - bulletinActuel.netVerse))})`}
+
                     </div>
                   )}
                 </div>

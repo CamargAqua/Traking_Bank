@@ -55,13 +55,22 @@ Deux virements NSRS le même mois avec références différentes = normal (mois 
 - "Domaine Camargaqua" / "Cca Domaine" / "Retour Cca Domaine" → VIREMENT_INTERNE (compte pro)
 - "Web M. Michel Victor" → VIREMENT_INTERNE (virement vers autre compte perso)
 - "De M. Michel Philippe" → VIREMENT_INTERNE (père)
-- "Luana Di Carlo" / "Luana D" (dans les deux sens, virement ou Wero) → REMBOURSEMENT_COLOC
-  (fiancée/colocataire : elle rembourse ~650€/mois = moitié loyer Oiko + charges partagées)
+- "Luana Di Carlo" / "Luana D" CRÉDIT (virement reçu, Wero) → REMBOURSEMENT_COLOC, exclure:false
+  (fiancée/colocataire : elle paie ~650€/mois = sa moitié du loyer + charges — c'est un revenu, ne pas exclure)
+- "Luana Di Carlo" / "Luana D" DÉBIT (virement envoyé) → REMBOURSEMENT_COLOC, exclure:false
+
 
 ══ LOGEMENT ══
 - "Oiko Gestion" / "SAS Oiko Gestion" → LOGEMENT, confiance:haute (loyer 1 085€/mois, payé le 1–3 du mois)
-- "Electricité De France" / "EDF" → LOGEMENT, confiance:haute
-- "Q-park" → LOGEMENT, confiance:haute (parking mensuel ~58,34€)
+- UN SEUL prélèvement Oiko par mois — LOGEMENT est réservé à Oiko uniquement.
+
+══ ENERGIE ══
+- "Electricité De France" / "EDF" → ENERGIE, confiance:haute
+- "Engie" / "Total Énergies" → ENERGIE, confiance:haute
+
+══ ABONNEMENT (compléments) ══
+- "Q-park" / "Q Park" / "Qpark" → ABONNEMENT, confiance:haute (abonnement parking voiture ~58,34€/mois)
+
 
 ══ ASSURANCE ══
 - "Filhet-allard" DÉBIT (montant négatif) → ASSURANCE, confiance:haute (mutuelle santé)
@@ -208,21 +217,33 @@ export interface BulletinInfo {
   salaireBrutFixe: number
   salaireBrutVar: number
   cotisations: number
-  netAPayer: number
+  netVerse: number
+
 }
 
-const BULLETIN_PROMPT = `Tu analyses un bulletin de salaire français de Victor Michel (salarié chez Seres Technologies).
+const BULLETIN_PROMPT = `Tu analyses un bulletin de salaire français de Victor Michel (salarié chez Seres Technologies, alias CRS).
 Extrais les informations clés et retourne UNIQUEMENT du JSON valide :
-{"periode":"2026-01","salaireBrutFixe":2800.00,"salaireBrutVar":0,"cotisations":950.00,"netAPayer":2850.00}
+{"periode":"2026-01","salaireBrutFixe":3800.00,"salaireBrutVar":1060.00,"cotisations":950.00,"netVerse":3151.24}
 
 Règles :
 - periode : format "YYYY-MM" (mois du bulletin)
-- salaireBrutFixe : salaire de base brut mensuel (hors primes et variables)
-- salaireBrutVar : total des éléments variables bruts (primes, heures sup, etc.) — 0 si aucun
-- cotisations : total des cotisations salariales (part salarié uniquement)
-- netAPayer : montant net à payer avant impôt à la source (ou net imposable si net à payer absent)
+- salaireBrutFixe : ligne "Salaire de base" uniquement (hors primes et avantages en nature)
+- salaireBrutVar : SOMME de toutes les lignes contenant les mots "Prime", "Embauche" ou "Affaire" — ce sont les variables versés par CRS. Ne pas inclure l'avantage en nature voiture. Si aucune, mets 0.
+- cotisations : total des cotisations salariales (part salarié uniquement, pas patronales)
+- netVerse : montant net réellement viré sur le compte bancaire, après prélèvement à la source.
+  Cherche dans cet ordre :
+  1. Ligne "Net payé" (avec ou sans accent, avec ou sans espace avant le montant)
+  2. Ligne "NET PAYÉ" ou "NET PAYE"
+  3. Ligne "Net à payer au salarié"
+  4. Ligne "Net à payer" (la dernière occurrence si plusieurs)
+  5. Ligne "NET A PAYER"
+  6. Ligne "Montant net versé" ou "Net versé"
+  7. En dernier recours : le plus grand montant positif isolé en bas du bulletin
+  IMPORTANT : ce montant est TOUJOURS inférieur au salaire brut et inférieur aux cotisations soustraites. Exemple pour Victor : entre 2 500 et 4 000 €.
 Si une valeur est absente, mets 0.
 Retourne UNIQUEMENT le JSON, sans texte autour.`
+
+
 
 export async function parseBulletinWithClaude(pdfText: string): Promise<BulletinInfo> {
   const truncated = pdfText.slice(0, 20000)
@@ -238,6 +259,8 @@ export async function parseBulletinWithClaude(pdfText: string): Promise<Bulletin
   if (content.type !== 'text') throw new Error('Réponse inattendue')
 
   let raw = content.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+  console.log('[bulletin] Claude raw response:', raw)
+
   try { return JSON.parse(raw) as BulletinInfo } catch { /* fallthrough */ }
   try { return JSON.parse(jsonrepair(raw)) as BulletinInfo } catch {
     throw new Error('Impossible de parser le bulletin. Réessayez.')

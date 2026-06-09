@@ -47,6 +47,8 @@ model BulletinSalaire {
   salaireBrutFixe Float
   salaireBrutVar  Float    @default(0)
   cotisations     Float
-  netAPayer       Float
+  netVerse         Float    @default(0)
+
+
   createdAt       DateTime @default(now())
 }

@@ -6,6 +6,8 @@ export const CATEGORIES = [
   'REMBOURSEMENT_DIVERS',
   'REVENU_EXCEPTIONNEL',
   'LOGEMENT',
+  'ENERGIE',
+
   'EPARGNE',
   'REMBOURSEMENT_DETTE',
   'ASSURANCE',
@@ -33,6 +35,8 @@ export const CATEGORIE_LABELS: Record<Categorie, string> = {
   REMBOURSEMENT_DIVERS: 'Rembt. Divers',
   REVENU_EXCEPTIONNEL: 'Revenu exceptionnel',
   LOGEMENT: 'Logement',
+  ENERGIE: 'Énergie',
+
   EPARGNE: 'Épargne',
   REMBOURSEMENT_DETTE: 'Rembt. Dette',
   ASSURANCE: 'Assurance',
@@ -58,6 +62,8 @@ export const CATEGORIE_COLORS: Record<Categorie, string> = {
   REMBOURSEMENT_DIVERS: '#64748b',
   REVENU_EXCEPTIONNEL: '#0ea5e9',
   LOGEMENT: '#4f46e5',
+  ENERGIE: '#f97316',
+
   EPARGNE: '#06b6d4',
   REMBOURSEMENT_DETTE: '#7c3aed',
   ASSURANCE: '#8b5cf6',
@@ -76,11 +82,14 @@ export const CATEGORIE_COLORS: Record<Categorie, string> = {
 }
 
 export const REVENUS: Categorie[] = [
-  'SALAIRE', 'PRIME', 'NOTE_FRAIS', 'REMBOURSEMENT_DIVERS', 'REVENU_EXCEPTIONNEL',
+  'SALAIRE', 'PRIME', 'NOTE_FRAIS', 'REMBOURSEMENT_COLOC', 'REMBOURSEMENT_DIVERS', 'REVENU_EXCEPTIONNEL',
+
 ]
 
 export const CHARGES_FIXES: Categorie[] = [
-  'LOGEMENT', 'EPARGNE', 'REMBOURSEMENT_DETTE', 'ASSURANCE', 'ABONNEMENT',
+  'LOGEMENT', 'ENERGIE', 'EPARGNE', 'REMBOURSEMENT_DETTE', 'ASSURANCE', 'ABONNEMENT',
+
 ]
 
-export const EXCLUS: Categorie[] = ['VIREMENT_INTERNE', 'REMBOURSEMENT_COLOC']
+export const EXCLUS: Categorie[] = ['VIREMENT_INTERNE']
+

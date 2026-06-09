@@ -12,14 +12,35 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const text = await extractTextFromPdf(buffer)
     const parsed = await parseBulletinWithClaude(text)
+    console.log('[parse-bulletin] parsed:', parsed)
 
-    const existing = await prisma.bulletinSalaire.findUnique({ where: { periode: parsed.periode } })
-    if (existing) {
-      return NextResponse.json({ error: `Bulletin ${parsed.periode} déjà importé` }, { status: 409 })
+    const bulletin = await prisma.bulletinSalaire.upsert({
+      where: { periode: parsed.periode },
+      update: {
+        salaireBrutFixe: parsed.salaireBrutFixe,
+        salaireBrutVar:  parsed.salaireBrutVar,
+        cotisations:     parsed.cotisations,
+        netVerse:        parsed.netVerse,
+      },
+      create: parsed,
+    })
+
+    // Trouver le relevé du même mois pour cross-validation et redirection
+    const releve = await prisma.releve.findFirst({
+      where: { periode: parsed.periode },
+      include: { transactions: true },
+    })
+
+    let reconciliation: { match: boolean; netBulletin: number; netReleve: number } | null = null
+    if (releve) {
+      const seresTx = releve.transactions.find(t => t.categorie === 'SALAIRE' && t.montant > 0)
+      if (seresTx) {
+        const ecart = Math.abs(seresTx.montant - parsed.netVerse)
+        reconciliation = { match: ecart < 50, netBulletin: parsed.netVerse, netReleve: seresTx.montant }
+      }
     }
 
-    const bulletin = await prisma.bulletinSalaire.create({ data: parsed })
-    return NextResponse.json({ success: true, bulletin })
+    return NextResponse.json({ success: true, bulletin, releve, reconciliation })
   } catch (err) {
     console.error('[parse-bulletin]', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })

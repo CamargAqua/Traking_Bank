@@ -93,10 +93,12 @@ export async function POST(req: NextRequest) {
           t.categorie === 'SALAIRE' && t.montant > 0
         )
         if (seresTx) {
-          const ecart = Math.abs(seresTx.montant - parsedBulletin.netAPayer)
+          const ecart = Math.abs(seresTx.montant - parsedBulletin.netVerse)
+
           reconciliation = {
             match: ecart < 50,
-            netBulletin: parsedBulletin.netAPayer,
+            netBulletin: parsedBulletin.netVerse,
+
             netReleve: seresTx.montant,
           }
         }
