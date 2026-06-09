@@ -6,6 +6,9 @@ import { TransactionList } from '@/components/TransactionList'
 import { HistoryChart } from '@/components/HistoryChart'
 import { REVENUS, CHARGES_FIXES, EXCLUS, CATEGORIE_LABELS, CATEGORIE_COLORS, type Categorie } from '@/lib/categories'
 import { ChargesAccordion } from '@/components/ChargesAccordion'
+import { RevenusCard } from '@/components/RevenusCard'
+import { SoldeKPIs } from '@/components/SoldeKPIs'
+import { ResteAVivreCard } from '@/components/ResteAVivreCard'
 import Link from 'next/link'
 import { PeriodSelector } from '@/components/PeriodSelector'
 
@@ -88,13 +91,26 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
 
 
-  const chargesFixes = actives
+  const chargesFixesBrutes = actives
     .filter(t => CHARGES_FIXES.includes(t.categorie as Categorie) && t.montant < 0)
     .reduce((s, t) => s + Math.abs(t.montant), 0)
 
-  const depensesVariables = actives
+  const participationColoc = actives
+    .filter(t => t.categorie === 'REMBOURSEMENT_COLOC' && t.montant > 0)
+    .reduce((s, t) => s + t.montant, 0)
+
+  const chargesFixes = chargesFixesBrutes - participationColoc
+
+  const depensesVariablesBrutes = actives
     .filter(t => !REVENUS.includes(t.categorie as Categorie) && !CHARGES_FIXES.includes(t.categorie as Categorie) && !EXCLUS.includes(t.categorie as Categorie) && t.montant < 0)
     .reduce((s, t) => s + Math.abs(t.montant), 0)
+
+  // Remboursements reçus de tiers (Wero, virements perso) → déduire des dépenses
+  const remboursementsReçus = actives
+    .filter(t => t.categorie === 'REMBOURSEMENT_DIVERS' && t.montant > 0)
+    .reduce((s, t) => s + t.montant, 0)
+
+  const depensesVariables = depensesVariablesBrutes - remboursementsReçus
 
   const epargne = actives.filter(t => t.categorie === 'EPARGNE' && t.montant < 0).reduce((s, t) => s + Math.abs(t.montant), 0)
   const soldeNet = revenus - chargesFixes - depensesVariables
@@ -113,15 +129,33 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     }
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
 
-  // ── Catégories chart ──────────────────────────────────────────────────────
+  if (participationColoc > 0) {
+    const colocTxs = actives.filter(t => t.categorie === 'REMBOURSEMENT_COLOC' && t.montant > 0)
+    chargesDetail.push({
+      cat: 'REMBOURSEMENT_COLOC',
+      total: -participationColoc,
+      txs: colocTxs.map(t => ({ libelle: t.libelle, montant: t.montant })),
+    })
+  }
+
+  // ── Catégories chart — toutes les dépenses (charges fixes + variables) ────
   const catMap = new Map<string, number>()
   actives
-    .filter(t => t.montant < 0 && !EXCLUS.includes(t.categorie as Categorie) && t.categorie !== 'NON_CATEGORISE')
+    .filter(t =>
+      t.montant < 0 &&
+      !EXCLUS.includes(t.categorie as Categorie) &&
+      !REVENUS.includes(t.categorie as Categorie) &&
+      t.categorie !== 'NON_CATEGORISE'
+    )
     .forEach(t => catMap.set(t.categorie, (catMap.get(t.categorie) ?? 0) + Math.abs(t.montant)))
   const catData = [...catMap.entries()]
     .map(([categorie, total]) => ({ categorie, total }))
     .sort((a, b) => b.total - a.total)
-    .slice(0, 8)
+
+  // Ajouter les remboursements reçus comme déduction (montant négatif = barre verte)
+  if (remboursementsReçus > 0) {
+    catData.push({ categorie: 'REMBOURSEMENT_DIVERS', total: -remboursementsReçus })
+  }
 
 
   return (
@@ -131,15 +165,29 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
         <div className="bg-white border-b border-[#ebebeb] px-7 py-3.5 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-baseline gap-2.5">
-            <span className="text-[16px] font-bold tracking-[-0.3px]">
-              {releve ? fmtPeriode(releve.periode) : 'Dashboard'}
-            </span>
-            {releve && (
-              <span className="text-[12px] text-[#999]">
-                {fmtDate(releve.dateDebut)} → {fmtDate(releve.dateFin)}
+          <div className="flex items-center gap-3">
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-[16px] font-bold tracking-[-0.3px]">
+                {releve ? fmtPeriode(releve.periode) : 'Dashboard'}
               </span>
-            )}
+              {releve && (
+                <span className="text-[12px] text-[#999]">
+                  {fmtDate(releve.dateDebut)} → {fmtDate(releve.dateFin)}
+                </span>
+              )}
+            </div>
+            {releve && (() => {
+              const cardStart = new Date(releve.dateDebut)
+              cardStart.setMonth(cardStart.getMonth() - 1)
+              cardStart.setDate(20)
+              const cardEnd = new Date(releve.dateDebut)
+              cardEnd.setDate(19)
+              return (
+                <span className="text-[11px] text-[#bbb] bg-[#f7f7f5] border border-[#ebebeb] rounded-full px-2.5 py-0.5">
+                  carte {fmtDate(cardStart)} → {fmtDate(cardEnd)}
+                </span>
+              )
+            })()}
           </div>
           {releves.length > 0 && activeId && (
             <PeriodSelector releves={releves} activeId={activeId} />
@@ -151,45 +199,26 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           {/* KPIs row 1 */}
           <div className="grid grid-cols-4 gap-3.5">
             <KPICard label="Revenus encaissés" value={fmtAmount(revenus)} color="green" sub={bulletinActuel && netVarEst > 0 ? `fixe ~${fmtAmountShort(netFixeEst)} · var ~${fmtAmountShort(netVarEst)}` : 'virement Seres'} />
-
             <KPICard label="Charges fixes" value={fmtAmount(chargesFixes)} sub={`${tauxCharges}% des revenus`} />
             <KPICard label="Dépenses variables" value={fmtAmount(depensesVariables)} color={depensesVariables > revenus * 0.4 ? 'red' : 'default'} sub="restos, courses, transport…" />
-            <KPICard label="Solde net du mois" value={fmtAmount(soldeNet)} color={soldeNet >= 0 ? 'default' : 'red'} sub={`Fin de mois : ${fmtAmount(releve?.soldeFin ?? 0)}`} />
+            <SoldeKPIs
+              soldeNetBase={soldeNet}
+              soldeFin={releve?.soldeFin ?? 0}
+              periode={releve?.periode ?? ''}
+            />
           </div>
 
           {/* Row 2: Revenus detail + Charges breakdown + Épargne/Reste à vivre */}
           <div className="grid grid-cols-3 gap-3.5">
 
             {/* Revenus détail */}
-            <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-3">Détail revenus</div>
-              <div className="flex flex-col gap-2">
-                {bulletinActuel && brutTotal > 0 ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] text-[#555]">Fixe net <span className="text-[10px] text-[#ccc]">(estimé)</span></span>
-                      <span className="text-[13px] font-semibold text-[#00b37e]">+{fmtAmount(netFixeEst)}</span>
-                    </div>
-                    {netVarEst > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12.5px] text-[#555]">Variable net <span className="text-[10px] text-[#ccc]">(estimé)</span></span>
-                        <span className="text-[13px] font-semibold text-[#059669]">+{fmtAmount(netVarEst)}</span>
-                      </div>
-                    )}
-                  </>
-                ) : salaire > 0 ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12.5px] text-[#555]">Salaire</span>
-                    <span className="text-[13px] font-semibold text-[#00b37e]">+{fmtAmount(salaire)}</span>
-                  </div>
-                ) : null}
-                <div className="border-t border-[#f2f2f2] mt-1 pt-2 flex items-center justify-between">
-                  <span className="text-[12px] font-bold text-[#111]">Reçu</span>
-                  <span className="text-[14px] font-bold text-[#00b37e]">+{fmtAmount(revenus)}</span>
-                </div>
-
-              </div>
-            </div>
+            <RevenusCard
+              revenus={revenus}
+              netFixeEst={netFixeEst}
+              netVarEst={netVarEst}
+              hasBulletin={!!(bulletinActuel && brutTotal > 0)}
+              periode={releve?.periode ?? ''}
+            />
 
             {/* Charges fixes — accordion cliquable */}
             <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
@@ -200,25 +229,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             </div>
 
             {/* Reste à vivre */}
-            <div className="bg-white border border-[#ebebeb] rounded-xl p-5">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[#bbb] mb-2">Reste à vivre</div>
-              <div className={`text-[32px] font-bold tracking-[-1px] ${resteAVivre >= 0 ? 'text-[#111]' : 'text-[#e53e3e]'}`}>
-                {fmtAmount(resteAVivre)}
-              </div>
-              <div className="text-[11.5px] text-[#999] mt-1">après charges fixes ({tauxCharges}% des revenus)</div>
-              <div className="h-2 bg-[#f2f2f2] rounded-full overflow-hidden mt-3">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${revenus > 0 ? Math.min(Math.round((resteAVivre / revenus) * 100), 100) : 0}%`,
-                    background: resteAVivre >= revenus * 0.5 ? '#00b37e' : resteAVivre >= revenus * 0.3 ? '#f59e0b' : '#e53e3e',
-                  }}
-                />
-              </div>
-              {epargne > 0 && (
-                <div className="mt-3 text-[11.5px] text-[#999]">dont {fmtAmount(epargne)} en épargne (PEL)</div>
-              )}
-            </div>
+            <ResteAVivreCard
+              resteAVivreBase={resteAVivre}
+              revenus={revenus}
+              tauxCharges={tauxCharges}
+              epargne={epargne}
+              periode={releve?.periode ?? ''}
+            />
           </div>
 
           {/* Banner non catégorisées */}

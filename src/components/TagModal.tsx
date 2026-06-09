@@ -12,6 +12,7 @@ interface TagModalProps {
 export function TagModal({ transaction, onClose, onSaved }: TagModalProps) {
   const [categorie, setCategorie] = useState(transaction.categorie)
   const [memoriser, setMemoriser] = useState(true)
+  const [exclure, setExclure] = useState(transaction.exclure)
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
@@ -21,7 +22,8 @@ export function TagModal({ transaction, onClose, onSaved }: TagModalProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         categorie,
-        memoriser,
+        exclure,
+        memoriser: memoriser && !exclure,
         pattern: transaction.libelle.split(' ').slice(0, 3).join(' '),
       }),
     })
@@ -63,10 +65,32 @@ export function TagModal({ transaction, onClose, onSaved }: TagModalProps) {
           </select>
         </div>
 
-        <label className="flex items-center gap-2.5 mb-6 cursor-pointer">
+        {/* Toggle exclure */}
+        <div
+          onClick={() => setExclure(e => !e)}
+          className={`mb-3 flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer border transition-all ${
+            exclure
+              ? 'bg-[#fff5f5] border-[#fecaca]'
+              : 'bg-[#fafafa] border-[#ebebeb] hover:border-[#ddd]'
+          }`}
+        >
+          <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${exclure ? 'bg-[#e53e3e]' : 'bg-[#e5e5e5]'}`}>
+            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${exclure ? 'left-4' : 'left-0.5'}`} />
+          </div>
+          <div>
+            <div className={`text-[12.5px] font-semibold ${exclure ? 'text-[#e53e3e]' : 'text-[#333]'}`}>
+              {exclure ? 'Exclu des calculs' : 'Inclure dans les calculs'}
+            </div>
+            <div className="text-[11px] text-[#999]">
+              {exclure ? 'Montant ignoré dans tous les totaux' : 'Compté dans charges / dépenses / revenus'}
+            </div>
+          </div>
+        </div>
+
+        <label className={`flex items-center gap-2.5 mb-6 cursor-pointer ${exclure ? 'opacity-30 pointer-events-none' : ''}`}>
           <input
             type="checkbox"
-            checked={memoriser}
+            checked={memoriser && !exclure}
             onChange={e => setMemoriser(e.target.checked)}
             className="w-4 h-4 accent-[#00b37e]"
           />

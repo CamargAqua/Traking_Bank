@@ -27,6 +27,58 @@ export async function POST(req: NextRequest) {
     const regles = await prisma.regleCategorie.findMany()
     const reglesMap = new Map(regles.map(r => [r.pattern.toLowerCase(), r.categorie]))
 
+    // Préparer les transactions
+    // REMBOURSEMENT_DIVERS exclu : peut être négatif (Wero envoyé) ou positif (reçu)
+    const REVENUS_CATS = ['SALAIRE','PRIME','NOTE_FRAIS','REVENU_EXCEPTIONNEL']
+    const CHARGES_RECURRENTES = ['LOGEMENT', 'ABONNEMENT']
+
+    const txMapped = parsed.transactions
+      .filter(t => t.date && typeof t.montant === 'number' && t.libelle && t.categorie)
+      .map(t => {
+        let categorie = t.categorie
+        let confiance = t.confiance
+        for (const [pattern, cat] of reglesMap) {
+          if (t.libelle.toLowerCase().includes(pattern)) {
+            categorie = cat
+            confiance = 'haute'
+            break
+          }
+        }
+        const montant = REVENUS_CATS.includes(categorie) && t.montant < 0
+          ? Math.abs(t.montant)
+          : t.montant
+        return {
+          date: new Date(t.date),
+          libelle: t.libelle,
+          libelleRaw: t.libelle,
+          montant,
+          categorie,
+          confiance,
+          exclure: t.exclure ?? false,
+        }
+      })
+
+    // Dédupliquer les charges récurrentes : même libellé + même montant + catégorie récurrente
+    // → garder la plus récente, exclure les antérieures (chevauchement de périodes mensuelles)
+    const seenRecurring = new Map<string, Date>()
+    for (const tx of txMapped) {
+      if (!CHARGES_RECURRENTES.includes(tx.categorie)) continue
+      const key = `${tx.libelle.toLowerCase()}|${tx.montant}`
+      const existing = seenRecurring.get(key)
+      if (existing) {
+        // Marquer l'ancienne comme exclure, garder la nouvelle
+        if (tx.date > existing) {
+          const old = txMapped.find(t => t.libelle.toLowerCase() === tx.libelle.toLowerCase() && t.montant === tx.montant && t.date === existing)
+          if (old) old.exclure = true
+          seenRecurring.set(key, tx.date)
+        } else {
+          tx.exclure = true
+        }
+      } else {
+        seenRecurring.set(key, tx.date)
+      }
+    }
+
     // Créer le relevé + transactions
     const releve = await prisma.releve.create({
       data: {
@@ -37,36 +89,7 @@ export async function POST(req: NextRequest) {
         soldeDebut: parsed.soldeDebut,
         soldeFin: parsed.soldeFin,
         transactions: {
-          create: parsed.transactions
-            .filter(t => t.date && typeof t.montant === 'number' && t.libelle && t.categorie)
-            .map(t => {
-            // Appliquer les règles mémorisées
-            let categorie = t.categorie
-            let confiance = t.confiance
-            for (const [pattern, cat] of reglesMap) {
-              if (t.libelle.toLowerCase().includes(pattern)) {
-                categorie = cat
-                confiance = 'haute'
-                break
-              }
-            }
-            // Si Claude a mis un revenu en négatif, on corrige le signe
-            const REVENUS_CATS = ['SALAIRE','PRIME','NOTE_FRAIS','REMBOURSEMENT_DIVERS','REVENU_EXCEPTIONNEL']
-            const montant = REVENUS_CATS.includes(categorie) && t.montant < 0
-              ? Math.abs(t.montant)
-              : t.montant
-
-            return {
-              date: new Date(t.date),
-              libelle: t.libelle,
-              libelleRaw: t.libelle,
-              montant,
-              categorie,
-              confiance,
-              exclure: t.exclure ?? false,
-
-            }
-          }),
+          create: txMapped,
         },
       },
       include: { transactions: true },

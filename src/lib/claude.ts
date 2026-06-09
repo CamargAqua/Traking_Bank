@@ -36,10 +36,10 @@ Règles de base :
 - "Prlv Dépenses Carte X9768" → IGNORER complètement (prélèvement global carte, pas une transaction)
 - "Annul. Vir" → IGNORER si suivi du même virement dans les 24h (correction bancaire)
 
-PIÈGE MONTANTS CARTE — les libellés contiennent codes postaux et arrondissements :
-"Bk Vieux Port 13 Marseille 1 29,35" → montant = -29.35 ("13" = dept, "1" = arrondissement, pas du prix)
-"Nicolas 9610 13 Marseille 1 19,90" → montant = -19.90
-Règle absolue : le DERNIER nombre avant "¨" est toujours le montant réel.
+MONTANTS — lire UNIQUEMENT les colonnes Débit / Crédit, jamais les nombres dans le libellé :
+- COMPTE COURANT : colonne Débit = montant négatif, colonne Crédit = montant positif
+- CARTE : le montant est le DERNIER nombre de la ligne, juste avant "¨" — ignorer tous les autres nombres (codes postaux, arrondissements, codes)
+  Exemples : "Bk Vieux Port 13 Marseille 1 29,35 ¨" → -29.35 | "Nicolas 9610 13 Marseille 1 19,90 ¨" → -19.90
 
 DATES CARTE — la section carte n'affiche que jour.mois sans année.
 Déduis l'année depuis le contexte du relevé. La carte couvre du 21 du mois précédent au 21 du mois courant.
@@ -55,17 +55,17 @@ Deux virements NSRS le même mois avec références différentes = normal (mois 
 - "Domaine Camargaqua" / "Cca Domaine" / "Retour Cca Domaine" → VIREMENT_INTERNE (compte pro)
 - "Web M. Michel Victor" → VIREMENT_INTERNE (virement vers autre compte perso)
 - "De M. Michel Philippe" → VIREMENT_INTERNE (père)
-- "Luana Di Carlo" / "Luana D" CRÉDIT (virement reçu, Wero) → REMBOURSEMENT_COLOC, exclure:false
-  (fiancée/colocataire : elle paie ~650€/mois = sa moitié du loyer + charges — c'est un revenu, ne pas exclure)
-- "Luana Di Carlo" / "Luana D" DÉBIT (virement envoyé) → REMBOURSEMENT_COLOC, exclure:false
+- "Luana Di Carlo" / "Luana D" CRÉDIT >600€ → REMBOURSEMENT_COLOC, exclure:false (participation loyer/charges)
+- "Luana Di Carlo" / "Luana D" CRÉDIT ≤600€ → REMBOURSEMENT_DIVERS, exclure:false (remboursement achat commun)
+- "Luana Di Carlo" / "Luana D" DÉBIT → REMBOURSEMENT_DIVERS, exclure:false (avance achat commun)
 
 
 ══ LOGEMENT ══
 - "Oiko Gestion" / "SAS Oiko Gestion" → LOGEMENT, confiance:haute (loyer 1 085€/mois, payé le 1–3 du mois)
-- UN SEUL prélèvement Oiko par mois — LOGEMENT est réservé à Oiko uniquement.
+- "Electricité De France" / "EDF" → LOGEMENT, confiance:haute (électricité logement)
+- LOGEMENT contient uniquement : loyer Oiko + EDF.
 
 ══ ENERGIE ══
-- "Electricité De France" / "EDF" → ENERGIE, confiance:haute
 - "Engie" / "Total Énergies" → ENERGIE, confiance:haute
 
 ══ ABONNEMENT (compléments) ══
@@ -73,8 +73,8 @@ Deux virements NSRS le même mois avec références différentes = normal (mois 
 
 
 ══ ASSURANCE ══
-- "Filhet-allard" DÉBIT (montant négatif) → ASSURANCE, confiance:haute (mutuelle santé)
-- "Filhet-allard" CRÉDIT (montant positif) → REMBOURSEMENT_DIVERS, confiance:haute (remboursement frais médicaux)
+- "Filhet-allard" DÉBIT (montant négatif) → ASSURANCE, confiance:haute (cotisation mutuelle santé)
+- "Filhet-allard" CRÉDIT (montant positif) → REMBOURSEMENT_DIVERS, exclure:true (remboursement frais médicaux, invisible)
 - "Gp - Assurance Fnac Multimedia" → ASSURANCE, confiance:haute
 
 ══ ABONNEMENTS ══
@@ -91,8 +91,10 @@ Deux virements NSRS le même mois avec références différentes = normal (mois 
 ══ ÉPARGNE ══
 - "Mens.pel" / "Virement Mens.pel" → EPARGNE (PEL ~45€/mois)
 
+══ CRÉDIT CONSO ══
+- "CRCAM" prêt / remboursement → CREDIT, confiance:haute (crédit conso ~263,88€/mois, début fév 2026)
+
 ══ REMBOURSEMENT DETTE ══
-- "CRCAM" prêt → REMBOURSEMENT_DETTE (prêt personnel ~263,88€/mois, début fév 2026)
 - "Intérets débiteurs" → REMBOURSEMENT_DETTE (agios découvert)
 
 ══ REMBOURSEMENTS DIVERS (exclure:false) ══
@@ -182,11 +184,11 @@ function repairJson(raw: string): string {
 }
 
 export async function parseReleveWithClaude(pdfText: string): Promise<ReleveInfo> {
-  const truncated = pdfText.slice(0, 25000)
+  const truncated = pdfText.slice(0, 60000)
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 8000,
+    max_tokens: 16000,
     messages: [{
       role: 'user',
       content: `Relevé bancaire Crédit Agricole de Victor Michel. Extrais toutes les transactions en JSON.\n\n${truncated}`,

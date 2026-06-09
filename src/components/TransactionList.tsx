@@ -11,10 +11,10 @@ interface TransactionListProps {
 }
 
 const CAT_ORDER = [
-  'SALAIRE','PRIME','NOTE_FRAIS','REMBOURSEMENT_DIVERS','REVENU_EXCEPTIONNEL',
-  'LOGEMENT','REMBOURSEMENT_DETTE','ASSURANCE','ABONNEMENT','EPARGNE',
-  'RESTOS_BARS','ALIMENTATION','TRANSPORT','SHOPPING','SANTE','CASH_DAB',
-  'IMPOTS','NON_CATEGORISE',
+  'SALAIRE','PRIME','NOTE_FRAIS','REMBOURSEMENT_COLOC','REMBOURSEMENT_DIVERS','REVENU_EXCEPTIONNEL',
+  'LOGEMENT','ENERGIE','CREDIT','REMBOURSEMENT_DETTE','ASSURANCE','ABONNEMENT','EPARGNE',
+  'RESTOS_BARS','ALIMENTATION','TRANSPORT','VOYAGE_SORTIES','SHOPPING','SANTE','CASH_DAB',
+  'IMPOTS','EXCEPTIONNEL','NON_CATEGORISE',
 ]
 
 export function TransactionList({ transactions }: TransactionListProps) {
@@ -24,16 +24,17 @@ export function TransactionList({ transactions }: TransactionListProps) {
   const [grouped, setGrouped] = useState(true)
   const [tagTarget, setTagTarget] = useState<Transaction | null>(null)
 
+  const [showExclus, setShowExclus] = useState(false)
   const actives = useMemo(() => transactions.filter(t => !t.exclure), [transactions])
   const uncategorizedCount = useMemo(() => actives.filter(t => t.categorie === 'NON_CATEGORISE').length, [actives])
+  const exclusCount = useMemo(() => transactions.filter(t => t.exclure).length, [transactions])
 
-  const presentCats = useMemo(() => {
-    const cats = new Set(actives.map(t => t.categorie))
-    return CAT_ORDER.filter(c => cats.has(c))
-  }, [actives])
+  const presentCats = CAT_ORDER
+
+  const displayList = useMemo(() => showExclus ? transactions : actives, [showExclus, transactions, actives])
 
   const filtered = useMemo(() => {
-    return actives.filter(t => {
+    return displayList.filter(t => {
       if (filter === 'uncategorized') return t.categorie === 'NON_CATEGORISE'
       if (filter !== 'all') return t.categorie === filter
       if (search) return (
@@ -47,7 +48,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
   const groups = useMemo(() => {
     if (!grouped || filter !== 'all' || search) return null
     const map = new Map<string, Transaction[]>()
-    for (const t of filtered) {
+    for (const t of filtered.filter(t => !t.exclure)) {
       const g = map.get(t.categorie) ?? []
       g.push(t)
       map.set(t.categorie, g)
@@ -70,10 +71,14 @@ export function TransactionList({ transactions }: TransactionListProps) {
   const renderRow = (t: Transaction) => (
     <tr
       key={t.id}
-      className={`border-b border-[#f9f9f9] hover:bg-[#fafafa] transition-colors ${
-        t.categorie === 'NON_CATEGORISE' ? 'bg-[#fffdf5] hover:bg-[#fffbeb] cursor-pointer' : 'cursor-default'
+      className={`border-b transition-colors cursor-pointer ${
+        t.exclure
+          ? 'border-[#f5f5f5] bg-[#fafafa] opacity-50 hover:opacity-70'
+          : t.categorie === 'NON_CATEGORISE'
+          ? 'border-[#f9f9f9] bg-[#fffdf5] hover:bg-[#fffbeb]'
+          : 'border-[#f9f9f9] hover:bg-[#fafafa]'
       }`}
-      onClick={() => t.categorie === 'NON_CATEGORISE' && setTagTarget(t)}
+      onClick={() => setTagTarget(t)}
     >
       <td className="px-4 py-2.5">
         <span className="font-mono text-[11.5px] text-[#999]">{formatDate(t.date)}</span>
@@ -151,6 +156,22 @@ export function TransactionList({ transactions }: TransactionListProps) {
           )}
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            {exclusCount > 0 && (
+              <button
+                onClick={() => {
+                  const next = !showExclus
+                  setShowExclus(next)
+                  if (next) { setGrouped(false); setFilter('all'); setSearch('') }
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11.5px] font-medium border transition-all ${
+                  showExclus
+                    ? 'bg-[#fff5f5] text-[#e53e3e] border-[#fecaca]'
+                    : 'text-[#bbb] border-[#e5e5e5] hover:text-[#888]'
+                }`}
+              >
+                ⊘ Exclus ({exclusCount})
+              </button>
+            )}
             <button
               onClick={() => { setGrouped(g => !g); setFilter('all'); setSearch('') }}
               className={`px-2.5 py-1 rounded-lg text-[11.5px] font-medium border transition-all ${

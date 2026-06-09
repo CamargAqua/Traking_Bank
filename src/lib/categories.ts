@@ -9,6 +9,7 @@ export const CATEGORIES = [
   'ENERGIE',
 
   'EPARGNE',
+  'CREDIT',
   'REMBOURSEMENT_DETTE',
   'ASSURANCE',
   'ABONNEMENT',
@@ -38,6 +39,7 @@ export const CATEGORIE_LABELS: Record<Categorie, string> = {
   ENERGIE: 'Énergie',
 
   EPARGNE: 'Épargne',
+  CREDIT: 'Crédit conso',
   REMBOURSEMENT_DETTE: 'Rembt. Dette',
   ASSURANCE: 'Assurance',
   ABONNEMENT: 'Abonnement',
@@ -65,6 +67,7 @@ export const CATEGORIE_COLORS: Record<Categorie, string> = {
   ENERGIE: '#f97316',
 
   EPARGNE: '#06b6d4',
+  CREDIT: '#e11d48',
   REMBOURSEMENT_DETTE: '#7c3aed',
   ASSURANCE: '#8b5cf6',
   ABONNEMENT: '#a78bfa',
@@ -82,13 +85,11 @@ export const CATEGORIE_COLORS: Record<Categorie, string> = {
 }
 
 export const REVENUS: Categorie[] = [
-  'SALAIRE', 'PRIME', 'NOTE_FRAIS', 'REMBOURSEMENT_COLOC', 'REMBOURSEMENT_DIVERS', 'REVENU_EXCEPTIONNEL',
-
+  'SALAIRE', 'PRIME', 'NOTE_FRAIS', 'REMBOURSEMENT_COLOC', 'REVENU_EXCEPTIONNEL',
 ]
 
 export const CHARGES_FIXES: Categorie[] = [
-  'LOGEMENT', 'ENERGIE', 'EPARGNE', 'REMBOURSEMENT_DETTE', 'ASSURANCE', 'ABONNEMENT',
-
+  'LOGEMENT', 'ENERGIE', 'EPARGNE', 'CREDIT', 'REMBOURSEMENT_DETTE', 'ASSURANCE', 'ABONNEMENT',
 ]
 
 export const EXCLUS: Categorie[] = ['VIREMENT_INTERNE']

@@ -119,11 +119,11 @@ async function importReleve(filePath: string): Promise<void> {
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 8000,
+    max_tokens: 16000,
     system: SYSTEM_PROMPT,
     messages: [{
       role: 'user',
-      content: `Voici le texte d'un relevé Crédit Agricole. Retourne le JSON.\n\n${text.slice(0, 14000)}`,
+      content: `Voici le texte d'un relevé Crédit Agricole. Retourne le JSON.\n\n${text.slice(0, 60000)}`,
     }],
   })
 
@@ -150,7 +150,7 @@ async function importReleve(filePath: string): Promise<void> {
         create: parsed.transactions
             .filter(t => t.date && typeof t.montant === 'number' && t.libelle && t.categorie)
             .map(t => {
-          const REVENUS_CATS = ['SALAIRE','PRIME','NOTE_FRAIS','REMBOURSEMENT_DIVERS','REVENU_EXCEPTIONNEL']
+          const REVENUS_CATS = ['SALAIRE','PRIME','NOTE_FRAIS','REVENU_EXCEPTIONNEL']
           const montant = REVENUS_CATS.includes(t.categorie) && t.montant < 0
             ? Math.abs(t.montant)
             : t.montant

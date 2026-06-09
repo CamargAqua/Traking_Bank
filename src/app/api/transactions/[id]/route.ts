@@ -11,6 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       categorie: body.categorie,
       verifie: true,
       notes: body.notes,
+      ...(body.exclure !== undefined ? { exclure: body.exclure } : {}),
     },
   })
 

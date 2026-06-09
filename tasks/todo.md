@@ -1,7 +1,10 @@
-# Todo — tracking_bank
+# Todo — Tracking_Bank
 
 > Mis à jour à chaque session. Cocher les tâches terminées.
 
-## Session en cours
-- [ ] Recevoir et intégrer le prompt détaillé (stack + specs) de l'utilisateur
-- [ ] Définir le format des relevés PDF à parser (banque, structure)
+## Session 2026-06-09 — Initialisation
+- [x] Cloner le repo depuis GitHub
+- [x] Initialiser la structure Claude Code (CLAUDE.md, tasks/, memory/)
+- [ ] Définir le format des relevés PDF à parser (quelle banque ?)
+- [ ] Vérifier que `npm install` + `prisma migrate dev` fonctionnent
+- [ ] Tester le flow import → parsing → dashboard end-to-end
