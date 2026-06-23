@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         // Marquer l'ancienne comme exclure, garder la nouvelle
         if (tx.date > existing) {
-          const old = txMapped.find(t => t.libelle.toLowerCase() === tx.libelle.toLowerCase() && t.montant === tx.montant && t.date === existing)
+          const old = txMapped.find(t => t.libelle.toLowerCase() === tx.libelle.toLowerCase() && t.montant === tx.montant && t.date.getTime() === existing.getTime())
           if (old) old.exclure = true
           seenRecurring.set(key, tx.date)
         } else {

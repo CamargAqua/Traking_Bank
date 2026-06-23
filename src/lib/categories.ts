@@ -94,3 +94,20 @@ export const CHARGES_FIXES: Categorie[] = [
 
 export const EXCLUS: Categorie[] = ['VIREMENT_INTERNE']
 
+// Postes de dépenses variables suivis dans la vue d'ensemble (budgets)
+// REMBOURSEMENT_DIVERS exclu : bruit de remboursements, pas une vraie dépense
+export const BUDGET_CATEGORIES: Categorie[] = [
+  'RESTOS_BARS', 'CASH_DAB', 'TRANSPORT', 'SHOPPING', 'SANTE', 'ALIMENTATION', 'VOYAGE_SORTIES',
+]
+
+// Budgets cibles simulés (basés sur l'historique réel ; éditables dans l'UI)
+export const DEFAULT_BUDGETS: Record<string, number> = {
+  RESTOS_BARS: 450,
+  CASH_DAB: 350,
+  TRANSPORT: 300,
+  SHOPPING: 200,
+  SANTE: 200,
+  ALIMENTATION: 190,
+  VOYAGE_SORTIES: 100,
+}
+

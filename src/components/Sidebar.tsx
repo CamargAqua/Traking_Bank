@@ -52,6 +52,15 @@ export function Sidebar({ releves, selectedId }: SidebarProps) {
         <div className="text-[10px] font-semibold uppercase tracking-[0.8px] text-[#bbb] px-2 mb-1">Menu</div>
 
         <Link
+          href="/apercu"
+          className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] font-medium mb-0.5 transition-all ${
+            pathname === '/apercu' ? 'bg-[#f0fdf8] text-[#00b37e] font-semibold' : 'text-[#999] hover:bg-[#f7f7f5] hover:text-[#111]'
+          }`}
+        >
+          <span className="w-4 text-center text-sm opacity-70">◷</span> Vue d&apos;ensemble
+        </Link>
+
+        <Link
           href="/"
           className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] font-medium mb-0.5 transition-all ${
             pathname === '/' && !selectedId ? 'bg-[#f0fdf8] text-[#00b37e] font-semibold' : 'text-[#999] hover:bg-[#f7f7f5] hover:text-[#111]'

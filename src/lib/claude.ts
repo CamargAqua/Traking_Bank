@@ -187,7 +187,7 @@ export async function parseReleveWithClaude(pdfText: string): Promise<ReleveInfo
   const truncated = pdfText.slice(0, 60000)
 
   const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-opus-4-8',
     max_tokens: 16000,
     messages: [{
       role: 'user',
@@ -251,7 +251,7 @@ export async function parseBulletinWithClaude(pdfText: string): Promise<Bulletin
   const truncated = pdfText.slice(0, 20000)
 
   const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-opus-4-8',
     max_tokens: 512,
     messages: [{ role: 'user', content: `Bulletin de salaire :\n\n${truncated}` }],
     system: BULLETIN_PROMPT,

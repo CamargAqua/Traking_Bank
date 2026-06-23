@@ -3,7 +3,6 @@ import { Sidebar } from '@/components/Sidebar'
 import { KPICard } from '@/components/KPICard'
 import { CategoryChart } from '@/components/CategoryChart'
 import { TransactionList } from '@/components/TransactionList'
-import { HistoryChart } from '@/components/HistoryChart'
 import { REVENUS, CHARGES_FIXES, EXCLUS, CATEGORIE_LABELS, CATEGORIE_COLORS, type Categorie } from '@/lib/categories'
 import { ChargesAccordion } from '@/components/ChargesAccordion'
 import { RevenusCard } from '@/components/RevenusCard'
@@ -31,6 +30,36 @@ async function getBulletins() {
   return prisma.bulletinSalaire.findMany({ orderBy: { periode: 'desc' } })
 }
 
+// Loyer Oiko : identifie les transactions de loyer
+const RENT_RE = /oiko/i
+
+// Dernier montant de loyer connu avant une date (pour estimation si loyer absent du relevé)
+async function getLastKnownRent(beforeDate: Date): Promise<number | null> {
+  const tx = await prisma.transaction.findFirst({
+    where: { libelle: { contains: 'Oiko' }, montant: { lt: 0 }, date: { lt: beforeDate } },
+    orderBy: { date: 'desc' },
+  })
+  return tx ? Math.abs(tx.montant) : null
+}
+
+// Participation coloc Luana : virement reçu dans la fourchette mensuelle attendue
+const COLOC_RE = /l[uo]ana/i
+const COLOC_MIN = 600
+const COLOC_MAX = 750
+
+// Dernière participation coloc connue avant une date (pour estimation si absente)
+async function getLastKnownColoc(beforeDate: Date): Promise<number | null> {
+  const tx = await prisma.transaction.findFirst({
+    where: {
+      OR: [{ libelle: { contains: 'Luana' } }, { libelle: { contains: 'Louana' } }],
+      montant: { gte: COLOC_MIN, lte: COLOC_MAX },
+      date: { lt: beforeDate },
+    },
+    orderBy: { date: 'desc' },
+  })
+  return tx ? tx.montant : null
+}
+
 const MONTH_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc']
 function fmtPeriode(p: string) {
   const [y, m] = p.split('-')
@@ -52,7 +81,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const activeId = releveId ?? releves[0]?.id
   const releve = activeId ? await getReleveData(activeId) : null
-  const history = releves.map(r => ({ periode: r.periode, soldeFin: r.soldeFin }))
 
   const bulletins = await getBulletins()
 
@@ -91,13 +119,63 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
 
 
-  const chargesFixesBrutes = actives
-    .filter(t => CHARGES_FIXES.includes(t.categorie as Categorie) && t.montant < 0)
-    .reduce((s, t) => s + Math.abs(t.montant), 0)
+  // ── Normalisation du loyer : exactement 1 loyer Oiko par mois ──────────────
+  // Les périodes de relevé ne s'alignent pas sur les mois → un relevé peut
+  // contenir 0, 1 ou 2 loyers. On force 1 seul ; si absent, on estime depuis
+  // le dernier loyer connu.
+  const rentTxsThisPeriod = actives.filter(t => RENT_RE.test(t.libelle) && t.montant < 0)
+  let rentEntry: { libelle: string; montant: number; estimated: boolean } | null = null
+  // Ids des loyers en doublon (non retenus) → exclus de la liste pour cohérence
+  let redundantRentIds: string[] = []
+  if (rentTxsThisPeriod.length > 0) {
+    // Préférer le loyer du mois calendaire de la période, sinon le plus ancien
+    const periodMonth = releve?.periode ?? ''
+    const match = rentTxsThisPeriod.find(t => t.date.toISOString().slice(0, 7) === periodMonth)
+    const chosen = match ?? [...rentTxsThisPeriod].sort((a, b) => a.date.getTime() - b.date.getTime())[0]
+    rentEntry = { libelle: chosen.libelle, montant: chosen.montant, estimated: false }
+    redundantRentIds = rentTxsThisPeriod.filter(t => t.id !== chosen.id).map(t => t.id)
+  } else {
+    const last = await getLastKnownRent(releve?.dateDebut ?? new Date())
+    if (last != null) rentEntry = { libelle: 'Loyer Oiko (estimé)', montant: -last, estimated: true }
+  }
 
-  const participationColoc = actives
-    .filter(t => t.categorie === 'REMBOURSEMENT_COLOC' && t.montant > 0)
-    .reduce((s, t) => s + t.montant, 0)
+  // ── Charges fixes normalisées : dédup exact (hors loyer) + 1 loyer unique ──
+  type ChargeEntry = { categorie: string; libelle: string; montant: number; estimated?: boolean }
+  const chargeEntries: ChargeEntry[] = []
+  {
+    const seen = new Set<string>()
+    for (const t of actives) {
+      if (!CHARGES_FIXES.includes(t.categorie as Categorie) || t.montant >= 0) continue
+      if (RENT_RE.test(t.libelle)) continue // loyer traité séparément
+      const key = `${t.categorie}|${t.libelle.toLowerCase()}|${t.montant}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      chargeEntries.push({ categorie: t.categorie, libelle: t.libelle, montant: t.montant })
+    }
+  }
+  if (rentEntry) {
+    chargeEntries.push({ categorie: 'LOGEMENT', libelle: rentEntry.libelle, montant: rentEntry.montant, estimated: rentEntry.estimated })
+  }
+
+  const chargesFixesBrutes = chargeEntries.reduce((s, e) => s + Math.abs(e.montant), 0)
+
+  // ── Normalisation participation coloc Luana : 1 par mois (fourchette 600-750) ─
+  // Détectée par libellé Luana + montant dans la fourchette, quel que soit le tag
+  // (parfois classée en REMBOURSEMENT_DIVERS). Estimée si absente du relevé.
+  const colocCandidates = actives.filter(
+    t => COLOC_RE.test(t.libelle) && t.montant >= COLOC_MIN && t.montant <= COLOC_MAX
+  )
+  let colocEntry: { libelle: string; montant: number; estimated: boolean; id: string | null } | null = null
+  if (colocCandidates.length > 0) {
+    const periodMonth = releve?.periode ?? ''
+    const match = colocCandidates.find(t => t.date.toISOString().slice(0, 7) === periodMonth)
+    const chosen = match ?? [...colocCandidates].sort((a, b) => a.date.getTime() - b.date.getTime())[0]
+    colocEntry = { libelle: chosen.libelle, montant: chosen.montant, estimated: false, id: chosen.id }
+  } else {
+    const last = await getLastKnownColoc(releve?.dateDebut ?? new Date())
+    if (last != null) colocEntry = { libelle: 'Part. Luana (estimé)', montant: last, estimated: true, id: null }
+  }
+  const participationColoc = colocEntry?.montant ?? 0
 
   const chargesFixes = chargesFixesBrutes - participationColoc
 
@@ -106,8 +184,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     .reduce((s, t) => s + Math.abs(t.montant), 0)
 
   // Remboursements reçus de tiers (Wero, virements perso) → déduire des dépenses
+  // On retire le virement coloc s'il a été classé en DIVERS (déjà compté en charges)
   const remboursementsReçus = actives
-    .filter(t => t.categorie === 'REMBOURSEMENT_DIVERS' && t.montant > 0)
+    .filter(t => t.categorie === 'REMBOURSEMENT_DIVERS' && t.montant > 0 && t.id !== colocEntry?.id)
     .reduce((s, t) => s + t.montant, 0)
 
   const depensesVariables = depensesVariablesBrutes - remboursementsReçus
@@ -121,33 +200,38 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // ── Charges fixes breakdown ───────────────────────────────────────────────
   const chargesDetail = CHARGES_FIXES.map(cat => {
-    const txs = actives.filter(t => t.categorie === cat && t.montant < 0)
+    const items = chargeEntries.filter(e => e.categorie === cat)
     return {
       cat,
-      total: txs.reduce((s, t) => s + Math.abs(t.montant), 0),
-      txs: txs.map(t => ({ libelle: t.libelle, montant: t.montant })),
+      total: items.reduce((s, e) => s + Math.abs(e.montant), 0),
+      txs: items.map(e => ({ libelle: e.libelle, montant: e.montant })),
     }
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
 
-  if (participationColoc > 0) {
-    const colocTxs = actives.filter(t => t.categorie === 'REMBOURSEMENT_COLOC' && t.montant > 0)
+  if (colocEntry && participationColoc > 0) {
     chargesDetail.push({
       cat: 'REMBOURSEMENT_COLOC',
       total: -participationColoc,
-      txs: colocTxs.map(t => ({ libelle: t.libelle, montant: t.montant })),
+      txs: [{ libelle: colocEntry.libelle, montant: colocEntry.montant }],
     })
   }
 
   // ── Catégories chart — toutes les dépenses (charges fixes + variables) ────
   const catMap = new Map<string, number>()
+  // Dépenses variables (hors charges fixes, normalisées séparément)
   actives
     .filter(t =>
       t.montant < 0 &&
       !EXCLUS.includes(t.categorie as Categorie) &&
       !REVENUS.includes(t.categorie as Categorie) &&
+      !CHARGES_FIXES.includes(t.categorie as Categorie) &&
       t.categorie !== 'NON_CATEGORISE'
     )
     .forEach(t => catMap.set(t.categorie, (catMap.get(t.categorie) ?? 0) + Math.abs(t.montant)))
+  // Charges fixes normalisées (dédup + 1 loyer)
+  for (const e of chargeEntries) {
+    catMap.set(e.categorie, (catMap.get(e.categorie) ?? 0) + Math.abs(e.montant))
+  }
   const catData = [...catMap.entries()]
     .map(([categorie, total]) => ({ categorie, total }))
     .sort((a, b) => b.total - a.total)
@@ -249,28 +333,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             </div>
           )}
 
-          {/* Charts row */}
-          <div className="grid gap-3.5" style={{ gridTemplateColumns: '1fr 1.4fr' }}>
-            <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
-                <span className="text-[13.5px] font-bold tracking-[-0.2px]">Dépenses par catégorie</span>
-                <span className="text-[11.5px] text-[#999]">{releve ? fmtPeriode(releve.periode) : ''}</span>
-              </div>
-              <div className="p-5">
-                {catData.length > 0 ? <CategoryChart data={catData} /> : (
-                  <p className="text-[13px] text-[#bbb] text-center py-4">Aucune dépense</p>
-                )}
-              </div>
+          {/* Dépenses par catégorie */}
+          <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
+              <span className="text-[13.5px] font-bold tracking-[-0.2px]">Dépenses par catégorie</span>
+              <span className="text-[11.5px] text-[#999]">{releve ? fmtPeriode(releve.periode) : ''}</span>
             </div>
-
-            <div className="bg-white border border-[#ebebeb] rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#f2f2f2] flex items-center justify-between">
-                <span className="text-[13.5px] font-bold tracking-[-0.2px]">Évolution du solde net</span>
-                <span className="text-[11.5px] text-[#999]">{releves.length} relevé{releves.length > 1 ? 's' : ''}</span>
-              </div>
-              <div className="p-5 h-56">
-                <HistoryChart data={history} />
-              </div>
+            <div className="p-5">
+              {catData.length > 0 ? <CategoryChart data={catData} /> : (
+                <p className="text-[13px] text-[#bbb] text-center py-4">Aucune dépense</p>
+              )}
             </div>
           </div>
 
@@ -319,7 +391,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               <span className="text-[13.5px] font-bold tracking-[-0.2px]">Transactions</span>
               <span className="text-[11.5px] text-[#999]">{actives.length} opérations</span>
             </div>
-            <TransactionList transactions={transactions} />
+            <TransactionList transactions={transactions} redundantIds={redundantRentIds} />
           </div>
 
         </div>

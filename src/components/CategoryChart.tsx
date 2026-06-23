@@ -1,16 +1,23 @@
 'use client'
+import { useState } from 'react'
 import { CATEGORIE_COLORS, CATEGORIE_LABELS, type Categorie } from '@/lib/categories'
 
 interface CategoryChartProps {
   data: { categorie: string; total: number }[]
 }
 
+const TOP_N = 5
+
 export function CategoryChart({ data }: CategoryChartProps) {
+  const [showAll, setShowAll] = useState(false)
   const max = Math.max(...data.map(d => Math.abs(d.total)), 1)
+
+  const visible = showAll ? data : data.slice(0, TOP_N)
+  const hiddenCount = data.length - TOP_N
 
   return (
     <div className="flex flex-col gap-2.5">
-      {data.map(({ categorie, total }) => {
+      {visible.map(({ categorie, total }) => {
         const isDeduction = total < 0
         const cat = categorie as Categorie
         const color = isDeduction ? '#00b37e' : (CATEGORIE_COLORS[cat] ?? '#d97706')
@@ -32,6 +39,15 @@ export function CategoryChart({ data }: CategoryChartProps) {
           </div>
         )
       })}
+
+      {hiddenCount > 0 && (
+        <button
+          onClick={() => setShowAll(s => !s)}
+          className="self-start mt-1 text-[12px] font-medium text-[#00b37e] hover:underline"
+        >
+          {showAll ? 'Voir moins' : `Voir tout (${hiddenCount} de plus)`}
+        </button>
+      )}
     </div>
   )
 }

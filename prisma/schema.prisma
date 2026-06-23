@@ -41,6 +41,13 @@ model RegleCategorie {
   createdAt DateTime @default(now())
 }
 
+model BudgetCategorie {
+  id           String   @id @default(cuid())
+  categorie    String   @unique
+  montantCible Float
+  updatedAt    DateTime @updatedAt
+}
+
 model BulletinSalaire {
   id              String   @id @default(cuid())
   periode         String   @unique // "2026-01"
